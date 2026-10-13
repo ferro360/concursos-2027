@@ -29,6 +29,7 @@ export function SiteHeader() {
           {user ? (
             <>
               <Link to="/nova-questao" className={link}>Nova questão</Link>
+              <Link to="/gerar-questoes" className={link}>Gerar com IA</Link>
               {isAdmin && <Link to="/admin" className={link}>Admin</Link>}
               <button onClick={sair} className="rounded-md bg-accent px-3 py-1.5 font-semibold text-accent-foreground">Sair</button>
             </>
