@@ -24,7 +24,7 @@ export function SiteHeader() {
       <div className="google-stripe h-1 w-full" />
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link to="/" className="shrink-0">
-          <img src={logoUrl} alt="Data5 Concursos" className="h-9 w-auto sm:h-10" />
+          <img src={logoUrl} alt="Data5 Concursos" className="h-11 w-auto sm:h-12" />
         </Link>
         <nav className="flex flex-wrap items-center gap-1 text-sm">
           <Link to="/" className={link} activeOptions={{ exact: true }}>Questões</Link>
@@ -32,7 +32,7 @@ export function SiteHeader() {
           {user ? (
             <>
               <Link to="/nova-questao" className={link}>Nova questão</Link>
-              <Link to="/gerar-questoes" className={link}>✨ Gerar com IA</Link>
+              <Link to="/gerar-questoes" className={link}>Gerar com IA</Link>
               {isAdmin && <Link to="/admin" className={link}>Admin</Link>}
               <button onClick={sair} className="ml-2 rounded-full border px-4 py-2 font-semibold text-foreground transition hover:bg-muted">Sair</button>
             </>
