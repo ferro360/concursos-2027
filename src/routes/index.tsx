@@ -32,7 +32,7 @@ const FILTERS = [
 ] as const;
 
 type Filtros = { campos: Record<string, string>; assunto: string; tipo: string; status: string; busca: string };
-const VAZIO: Filtros = { campos: {}, assunto: "", tipo: "", status: "", busca: "" };
+const VAZIO: Filtros = { campos: {}, assunto: "", tipo: "", status: "nao", busca: "" };
 
 function Index() {
   const { user } = useSession();
@@ -203,6 +203,11 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
         <span>Ano: {q.ano}</span>
         {q.nivel && <span>Nível: {q.nivel}</span>}
         <span>{ce ? "Certo/Errado" : "Múltipla escolha"}</span>
+        {isAnswered && (
+          <span className={`font-semibold ${answered === q.correta ? "text-success" : "text-destructive"}`}>
+            ✓ {answered === q.correta ? "Acertou" : "Errou"}
+          </span>
+        )}
       </div>
       <div className="p-5">
         <p className="mb-4 whitespace-pre-line leading-relaxed">{q.enunciado}</p>
