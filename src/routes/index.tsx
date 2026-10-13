@@ -89,7 +89,7 @@ function Index() {
   }), [questions, f, busca, aplicado, answers, assuntosPorQuestao]);
 
   const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
-  const dDisc = draft.campos.disciplina;
+  const dDisc = draft.campos["disciplina"];
   const assuntoOptions = Array.from(new Set(questions.filter((q) => !dDisc || q.disciplina === dDisc).flatMap(assuntosDe))).filter(Boolean).sort();
   const vals = Object.values(answers);
   const done = vals.length;
