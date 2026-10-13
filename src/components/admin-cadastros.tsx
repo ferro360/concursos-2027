@@ -64,7 +64,7 @@ export function AdminCadastros() {
             {itens.map((i) => (
               <tr key={i.id} className="border-t first:border-t-0">
                 <td className="p-3 font-semibold">{i.nome}</td>
-                {tab === "assuntos" && <td className="p-3 text-muted-foreground">{nomeDisc((i as { disciplina_id: number }).disciplina_id)}</td>}
+                {tab === "assuntos" && <td className="p-3 text-muted-foreground">{"disciplina_id" in i ? nomeDisc(i.disciplina_id) : ""}</td>}
                 <td className="whitespace-nowrap p-3 text-right">
                   <button onClick={() => renomear(i.id, i.nome)} className="mr-3 text-primary underline">Renomear</button>
                   <button onClick={() => excluir(i.id, i.nome)} className="text-destructive underline">Excluir</button>
