@@ -196,6 +196,7 @@ export type Database = {
           imagem_url: string
           orgao: string
           orgao_id: number | null
+          tipo: string
           video_url: string
         }
         Insert: {
@@ -216,6 +217,7 @@ export type Database = {
           imagem_url?: string
           orgao: string
           orgao_id?: number | null
+          tipo?: string
           video_url?: string
         }
         Update: {
@@ -236,6 +238,7 @@ export type Database = {
           imagem_url?: string
           orgao?: string
           orgao_id?: number | null
+          tipo?: string
           video_url?: string
         }
         Relationships: [

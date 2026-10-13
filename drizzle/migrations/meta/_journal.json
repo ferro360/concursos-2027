@@ -36,6 +36,13 @@
       "when": 1791903582221,
       "tag": "0004_question_media",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791914849968,
+      "tag": "0005_criar_tipo_questao_certo_errado",
+      "breakpoints": true
     }
   ]
 }
