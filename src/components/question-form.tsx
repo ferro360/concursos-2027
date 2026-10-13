@@ -3,13 +3,14 @@ import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
-export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
+export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "tipo" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
   disciplina: string; assunto: string; banca: string; orgao: string;
   /** todos os assuntos marcados (inclui o principal, assunto_id) */
   assunto_ids: number[];
 };
 
 const letters = "ABCDE";
+const CE = ["Certo", "Errado"];
 const NOVO = "__novo__";
 const input = "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 
@@ -43,6 +44,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     ano: String(initial?.ano ?? new Date().getFullYear()), enunciado: initial?.enunciado ?? "", comentario: initial?.comentario ?? "",
     imagem_url: initial?.imagem_url ?? "", video_url: initial?.video_url ?? "",
   });
+  const [tipo, setTipo] = useState<"multipla_escolha" | "certo_errado">(initial?.tipo === "certo_errado" ? "certo_errado" : "multipla_escolha");
   const [alts, setAlts] = useState(() => [...(initial?.alternativas ?? []), "", "", "", "", ""].slice(0, 5));
   const [correta, setCorreta] = useState(initial?.correta ?? 0);
   const [saving, setSaving] = useState(false);
@@ -71,16 +73,16 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     const filled = alts.map((a) => a.trim());
     let last = filled.length - 1;
     while (last >= 0 && !filled[last]) last--;
-    const alternativas = filled.slice(0, last + 1);
+    const alternativas = tipo === "certo_errado" ? CE : filled.slice(0, last + 1);
     if (!ids.disciplina_id || !ids.banca_id || !ids.orgao_id) { toast.error("Selecione disciplina, banca e órgão."); return; }
     if (assuntoIds.length === 0) { toast.error("Marque ao menos um assunto."); return; }
-    if (alternativas.length < 2 || alternativas.some((a) => !a)) { toast.error("Preencha ao menos 2 alternativas, em sequência."); return; }
-    if (correta >= alternativas.length) { toast.error("A alternativa correta está vazia."); return; }
+    if (tipo === "multipla_escolha" && (alternativas.length < 2 || alternativas.some((a) => !a))) { toast.error("Preencha ao menos 2 alternativas, em sequência."); return; }
+    if (correta >= alternativas.length) { toast.error("Marque a resposta correta."); return; }
     setSaving(true);
     // names are filled in by the database from the linked records
     await onSubmit({
       ...ids, ...form, assunto_id: assuntoIds[0] ?? null, assunto_ids: assuntoIds,
-      disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), alternativas, correta,
+      disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), tipo, alternativas, correta,
     });
     setSaving(false);
   };
@@ -98,6 +100,16 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
         <label className="space-y-1 text-sm">
           <span className="font-semibold">Ano</span>
           <input required type="number" min={1950} max={2100} value={form.ano} onChange={set("ano")} className={input} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-semibold">Tipo</span>
+          <select value={tipo} className={input} onChange={(e) => {
+            const t = e.target.value as "multipla_escolha" | "certo_errado";
+            setTipo(t); setCorreta(0); setAlts(["", "", "", "", ""]);
+          }}>
+            <option value="multipla_escolha">Múltipla escolha (A–E)</option>
+            <option value="certo_errado">Certo ou Errado</option>
+          </select>
         </label>
       </div>
 
@@ -134,8 +146,15 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
         </label>
       </div>
       <div className="space-y-2">
-        <p className="text-sm font-semibold">Alternativas <span className="font-normal text-muted-foreground">(marque a correta)</span></p>
-        {alts.map((a, i) => (
+        <p className="text-sm font-semibold">
+          {tipo === "certo_errado" ? "Gabarito" : "Alternativas"} <span className="font-normal text-muted-foreground">(marque a correta)</span>
+        </p>
+        {tipo === "certo_errado" ? CE.map((nome, i) => (
+          <label key={nome} className="flex items-center gap-3">
+            <input type="radio" name="correta" checked={correta === i} onChange={() => setCorreta(i)} />
+            <span className="font-semibold">{nome}</span>
+          </label>
+        )) : alts.map((a, i) => (
           <label key={i} className="flex items-center gap-3">
             <input type="radio" name="correta" checked={correta === i} onChange={() => setCorreta(i)} />
             <span className="w-4 font-semibold">{letters[i]}</span>
