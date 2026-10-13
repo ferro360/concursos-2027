@@ -36,6 +36,7 @@ function GerarQuestoes() {
   const [quantidade, setQuantidade] = useState(5);
   const [ano, setAno] = useState(new Date().getFullYear());
   const [instrucoes, setInstrucoes] = useState("");
+  const [conteudo, setConteudo] = useState("");
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [itens, setItens] = useState<Item[]>([]);
@@ -46,14 +47,14 @@ function GerarQuestoes() {
   const onGerar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ids.disciplina || !ids.banca || !ids.orgao) { toast.error("Selecione disciplina, banca e órgão."); return; }
-    if (!assuntoIds.length && !instrucoes.trim()) { toast.error("Marque ao menos um assunto ou descreva o tema nas instruções."); return; }
+    if (!assuntoIds.length && !instrucoes.trim() && !conteudo.trim()) { toast.error("Marque um assunto, cole um conteúdo ou descreva o tema nas instruções."); return; }
     setBusy(true);
     try {
       const r = await gerar({ data: {
         disciplina: nome(data.disciplinas, ids.disciplina),
         assuntos: assuntoIds.map((id) => nome(data.assuntos, id)),
         banca: nome(data.bancas, ids.banca), nivel: nome(data.niveis, ids.nivel),
-        tipo, quantidade, instrucoes,
+        tipo, quantidade, instrucoes, conteudo: conteudo.trim(),
       } });
       if (r.error) toast.error(r.error);
       else { setItens(r.questoes.map((q) => ({ ...q, marcada: true }))); toast.success(`${r.questoes.length} questão(ões) geradas. Revise antes de salvar.`); }
@@ -143,6 +144,11 @@ function GerarQuestoes() {
               </div>
             )}
           </fieldset>
+          <label className="block space-y-1 text-sm">
+            <span className="font-semibold">Conteúdo base <span className="font-normal text-muted-foreground">(opcional — cole um texto, lei, apostila; as questões serão criadas a partir dele)</span></span>
+            <textarea rows={8} maxLength={60000} placeholder="Cole aqui o conteúdo..." value={conteudo} onChange={(e) => setConteudo(e.target.value)} className={input} />
+            <span className="text-xs text-muted-foreground">{conteudo.length.toLocaleString("pt-BR")} / 60.000 caracteres</span>
+          </label>
           <textarea rows={2} maxLength={2000} placeholder="Instruções — ex.: tema/assunto que servirá de base (quando não estiver cadastrado), foco em jurisprudência do STF, nível difícil..." value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} className={input} />
           <button disabled={busy} className="rounded-md bg-accent px-6 py-2 font-semibold text-accent-foreground disabled:opacity-50">
             {busy ? "Gerando... (pode levar até 1 minuto)" : "Gerar questões"}
