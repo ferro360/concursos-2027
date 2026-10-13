@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/site-header";
 import { QuestionForm } from "@/components/question-form";
+import { SpreadsheetImport } from "@/components/spreadsheet-import";
 
 export const Route = createFileRoute("/_authenticated/nova-questao")({
   head: () => ({
@@ -27,6 +28,7 @@ function NovaQuestao() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-6 font-display text-3xl font-bold">Nova questão</h1>
+        <SpreadsheetImport />
         <QuestionForm submitLabel="Cadastrar questão" onSubmit={async (q) => {
           const { data: u } = await supabase.auth.getUser();
           const { assunto_ids, ...rest } = q;
