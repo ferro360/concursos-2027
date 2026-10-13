@@ -10,6 +10,7 @@ const Input = z.object({
   tipo: z.enum(["multipla_escolha", "certo_errado"]),
   quantidade: z.number().int().min(1).max(10),
   instrucoes: z.string().max(2000),
+  conteudo: z.string().max(60000).default(""),
 });
 
 const Schema = z.object({
@@ -44,10 +45,11 @@ ${ce
 "comentario" explica por que a resposta está certa e as demais erradas.`;
     const prompt = `Gere ${data.quantidade} questão(ões) inéditas.
 Disciplina: ${data.disciplina}
-${data.assuntos.length ? `Assunto(s): ${data.assuntos.join(", ")}` : "Assunto livre: defina o tema a partir das instruções adicionais."}
+${data.assuntos.length ? `Assunto(s): ${data.assuntos.join(", ")}` : "Assunto livre: defina o tema a partir do conteúdo enviado e/ou das instruções adicionais."}
 ${data.banca ? `Estilo da banca: ${data.banca}` : ""}
 ${data.nivel ? `Escolaridade: ${data.nivel}` : ""}
-${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}`;
+${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}
+${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : ""}`;
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
