@@ -149,6 +149,8 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
   const [showCom, setShowCom] = useState(false);
   const isAnswered = answered !== undefined;
   const letters = "ABCDE";
+  const CE = ["Certo", "Errado"];
+  const ce = q.tipo === "certo_errado";
 
   return (
     <article className="overflow-hidden rounded-xl border bg-card shadow-sm">
