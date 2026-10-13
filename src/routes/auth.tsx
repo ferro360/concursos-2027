@@ -68,7 +68,7 @@ function AuthPage() {
             )}
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" className={input} />
             <input required type="password" minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Senha" className={input} />
-            <button disabled={loading} className="w-full rounded-md bg-accent py-2 font-semibold text-accent-foreground disabled:opacity-50">
+            <button disabled={loading} className="w-full rounded-md bg-primary py-2 font-semibold text-primary-foreground disabled:opacity-50">
               {modo === "entrar" ? "Entrar" : "Cadastrar"}
             </button>
           </form>

@@ -167,7 +167,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
         ))}
       </div>
       <textarea rows={3} placeholder="Comentário / explicação (opcional)" value={form.comentario} onChange={set("comentario")} className={input} />
-      <button disabled={saving} className="rounded-md bg-accent px-6 py-2 font-semibold text-accent-foreground disabled:opacity-50">
+      <button disabled={saving} className="rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift disabled:opacity-50">
         {saving ? "Salvando..." : submitLabel}
       </button>
     </form>

@@ -56,7 +56,7 @@ export function AdminCadastros() {
           </select>
         )}
         <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Novo nome..." className={`${input} flex-1`} />
-        <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">Adicionar</button>
+        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Adicionar</button>
       </form>
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <table className="w-full text-sm">

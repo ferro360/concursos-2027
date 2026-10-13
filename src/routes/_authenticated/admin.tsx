@@ -176,7 +176,7 @@ function Usuarios() {
         <tbody>
           {data.map((u) => (
             <tr key={u.id} className="border-t">
-              <td className="p-3 font-semibold">{u.username} {u.is_admin && <span className="ml-1 rounded bg-accent px-1.5 py-0.5 text-xs text-accent-foreground">admin</span>}</td>
+              <td className="p-3 font-semibold">{u.username} {u.is_admin && <span className="ml-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">admin</span>}</td>
               <td className="p-3">{u.email}</td>
               <td className="p-3">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
               <td className="p-3 text-right">{u.resolvidas}</td>
