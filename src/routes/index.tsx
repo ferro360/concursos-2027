@@ -55,10 +55,29 @@ function Index() {
     },
   });
 
+  // mapa questão -> nomes de todos os assuntos vinculados
+  const { data: assuntosPorQuestao = {} } = useQuery({
+    queryKey: ["question-assuntos"],
+    queryFn: async () => {
+      const [{ data: links, error: e1 }, { data: assuntos, error: e2 }] = await Promise.all([
+        supabase.from("question_assuntos").select("question_id, assunto_id"),
+        supabase.from("assuntos").select("id, nome"),
+      ]);
+      if (e1) throw e1;
+      if (e2) throw e2;
+      const nomes = Object.fromEntries(assuntos.map((a) => [a.id, a.nome]));
+      const map: Record<number, string[]> = {};
+      for (const l of links) (map[l.question_id] ??= []).push(nomes[l.assunto_id] ?? "");
+      return map;
+    },
+  });
+
+  const assuntosDe = (q: Question) => assuntosPorQuestao[q.id]?.filter(Boolean) ?? [q.assunto];
+
   const list = useMemo(() => questions.filter((q) =>
     FILTERS.every(([k]) => !f[k] || String(q[k]) === f[k]) &&
-    (!busca || (q.enunciado + q.assunto).toLowerCase().includes(busca.toLowerCase()))
-  ), [questions, f, busca]);
+    (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()))
+  ), [questions, f, busca, assuntosPorQuestao]);
 
   const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
   const vals = Object.values(answers);
@@ -111,7 +130,7 @@ function Index() {
 
         <div className="space-y-6">
           {list.map((q) => (
-            <QuestionCard key={q.id} q={q} canAnswer={!!user} answered={answers[q.id]?.alternativa}
+            <QuestionCard key={q.id} q={q} assuntos={assuntosDe(q)} canAnswer={!!user} answered={answers[q.id]?.alternativa}
               onAnswer={(a) => responder(q, a)} />
           ))}
         </div>
@@ -120,7 +139,7 @@ function Index() {
   );
 }
 
-function QuestionCard({ q, canAnswer, answered, onAnswer }: { q: Question; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
+function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Question; assuntos: string[]; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const [showCom, setShowCom] = useState(false);
   const isAnswered = answered !== undefined;
@@ -130,7 +149,7 @@ function QuestionCard({ q, canAnswer, answered, onAnswer }: { q: Question; canAn
     <article className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-b bg-muted px-4 py-2 text-xs text-muted-foreground">
         <b className="text-foreground">Q{q.id}</b>
-        <span>{q.disciplina} › {q.assunto}</span>
+        <span>{q.disciplina} › {assuntos.join(", ")}</span>
         <span>Banca: {q.banca}</span>
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>

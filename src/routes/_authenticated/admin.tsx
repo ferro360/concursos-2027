@@ -63,6 +63,16 @@ function Questoes() {
       return data;
     },
   });
+  const { data: links = {} } = useQuery({
+    queryKey: ["question-assuntos"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("question_assuntos").select("question_id, assunto_id");
+      if (error) throw error;
+      const map: Record<number, number[]> = {};
+      for (const l of data) (map[l.question_id] ??= []).push(l.assunto_id);
+      return map;
+    },
+  });
   const list = data.filter((q) => !busca || `${q.id} ${q.enunciado} ${q.disciplina} ${q.banca}`.toLowerCase().includes(busca.toLowerCase()));
 
   const excluir = async (id: number) => {
@@ -71,17 +81,24 @@ function Questoes() {
     if (error) { toast.error("Erro ao excluir."); return; }
     toast.success("Questão excluída.");
     qc.invalidateQueries({ queryKey: ["questions"] });
+    qc.invalidateQueries({ queryKey: ["question-assuntos"] });
   };
 
   if (editing) return (
     <div>
       <button onClick={() => setEditing(null)} className="mb-4 text-sm text-primary underline">← Voltar à lista</button>
       <h2 className="mb-4 font-display text-xl font-bold">Editar Q{editing.id}</h2>
-      <QuestionForm initial={editing} submitLabel="Salvar alterações" onSubmit={async (q) => {
-        const { error } = await supabase.from("questions").update(q).eq("id", editing.id);
+      <QuestionForm initial={{ ...editing, assunto_ids: links[editing.id] ?? (editing.assunto_id ? [editing.assunto_id] : []) }} submitLabel="Salvar alterações" onSubmit={async (q) => {
+        const { assunto_ids, ...rest } = q;
+        const { error } = await supabase.from("questions").update(rest).eq("id", editing.id);
         if (error) { toast.error("Erro ao salvar."); return; }
+        await supabase.from("question_assuntos").delete().eq("question_id", editing.id);
+        const { error: linkError } = await supabase.from("question_assuntos")
+          .insert(assunto_ids.map((assunto_id) => ({ question_id: editing.id, assunto_id })));
+        if (linkError) { toast.error("Questão salva, mas houve erro ao vincular os assuntos."); return; }
         toast.success("Questão atualizada.");
         qc.invalidateQueries({ queryKey: ["questions"] });
+        qc.invalidateQueries({ queryKey: ["question-assuntos"] });
         setEditing(null);
       }} />
     </div>

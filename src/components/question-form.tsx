@@ -5,6 +5,8 @@ import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
 export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "enunciado" | "comentario" | "alternativas" | "correta"> & {
   disciplina: string; assunto: string; banca: string; orgao: string;
+  /** todos os assuntos marcados (inclui o principal, assunto_id) */
+  assunto_ids: number[];
 };
 
 const letters = "ABCDE";
@@ -31,9 +33,12 @@ function CadastroSelect({ label, value, options, onChange, onNovo, disabled }: {
 export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Partial<QuestionInput> | undefined; submitLabel: string; onSubmit: (q: QuestionInput) => Promise<void> }) {
   const { data, adicionar } = useCadastros();
   const [ids, setIds] = useState({
-    disciplina_id: initial?.disciplina_id ?? null, assunto_id: initial?.assunto_id ?? null,
+    disciplina_id: initial?.disciplina_id ?? null,
     banca_id: initial?.banca_id ?? null, orgao_id: initial?.orgao_id ?? null,
   });
+  const [assuntoIds, setAssuntoIds] = useState<number[]>(
+    initial?.assunto_ids ?? (initial?.assunto_id ? [initial.assunto_id] : [])
+  );
   const [form, setForm] = useState({
     ano: String(initial?.ano ?? new Date().getFullYear()), enunciado: initial?.enunciado ?? "", comentario: initial?.comentario ?? "",
   });
@@ -42,11 +47,22 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
 
+  const toggleAssunto = (id: number) =>
+    setAssuntoIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
   const novo = async (tabela: CadastroTabela, campo: keyof typeof ids, label: string) => {
     const nome = prompt(`Nome do novo(a) ${label}:`);
     if (!nome) return;
     const id = await adicionar(tabela, nome, ids.disciplina_id ?? undefined);
-    if (id) setIds((s) => ({ ...s, [campo]: id, ...(campo === "disciplina_id" ? { assunto_id: null } : {}) }));
+    if (id) setIds((s) => ({ ...s, [campo]: id }));
+  };
+
+  const novoAssunto = async () => {
+    if (!ids.disciplina_id) { toast.error("Escolha a disciplina primeiro."); return; }
+    const nome = prompt("Nome do novo assunto:");
+    if (!nome) return;
+    const id = await adicionar("assuntos", nome, ids.disciplina_id);
+    if (id) setAssuntoIds((s) => [...s, id]);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -55,12 +71,16 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     let last = filled.length - 1;
     while (last >= 0 && !filled[last]) last--;
     const alternativas = filled.slice(0, last + 1);
-    if (Object.values(ids).some((v) => !v)) { toast.error("Selecione disciplina, assunto, banca e órgão."); return; }
+    if (!ids.disciplina_id || !ids.banca_id || !ids.orgao_id) { toast.error("Selecione disciplina, banca e órgão."); return; }
+    if (assuntoIds.length === 0) { toast.error("Marque ao menos um assunto."); return; }
     if (alternativas.length < 2 || alternativas.some((a) => !a)) { toast.error("Preencha ao menos 2 alternativas, em sequência."); return; }
     if (correta >= alternativas.length) { toast.error("A alternativa correta está vazia."); return; }
     setSaving(true);
     // names are filled in by the database from the linked records
-    await onSubmit({ ...ids, ...form, disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), alternativas, correta });
+    await onSubmit({
+      ...ids, ...form, assunto_id: assuntoIds[0] ?? null, assunto_ids: assuntoIds,
+      disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), alternativas, correta,
+    });
     setSaving(false);
   };
 
@@ -69,9 +89,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     <form onSubmit={submit} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
       <div className="grid gap-3 sm:grid-cols-2">
         <CadastroSelect label="Disciplina" value={ids.disciplina_id} options={data.disciplinas}
-          onChange={(v) => setIds({ ...ids, disciplina_id: v, assunto_id: null })} onNovo={() => novo("disciplinas", "disciplina_id", "disciplina")} />
-        <CadastroSelect label="Assunto" value={ids.assunto_id} options={assuntos} disabled={!ids.disciplina_id}
-          onChange={(v) => setIds({ ...ids, assunto_id: v })} onNovo={() => novo("assuntos", "assunto_id", "assunto")} />
+          onChange={(v) => { setIds({ ...ids, disciplina_id: v }); setAssuntoIds([]); }} onNovo={() => novo("disciplinas", "disciplina_id", "disciplina")} />
         <CadastroSelect label="Banca" value={ids.banca_id} options={data.bancas}
           onChange={(v) => setIds({ ...ids, banca_id: v })} onNovo={() => novo("bancas", "banca_id", "banca")} />
         <CadastroSelect label="Órgão" value={ids.orgao_id} options={data.orgaos}
@@ -81,6 +99,28 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
           <input required type="number" min={1950} max={2100} value={form.ano} onChange={set("ano")} className={input} />
         </label>
       </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-semibold">
+          Assuntos <span className="font-normal text-muted-foreground">(marque um ou mais; o primeiro marcado é o principal)</span>
+        </legend>
+        {!ids.disciplina_id ? (
+          <p className="text-sm text-muted-foreground">Escolha a disciplina primeiro.</p>
+        ) : (
+          <div className="grid max-h-48 gap-1 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
+            {assuntos.map((a) => (
+              <label key={a.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={assuntoIds.includes(a.id)} onChange={() => toggleAssunto(a.id)} />
+                {a.nome}
+              </label>
+            ))}
+            <button type="button" onClick={novoAssunto} className="text-left text-sm text-primary underline">
+              + Adicionar novo assunto...
+            </button>
+          </div>
+        )}
+      </fieldset>
+
       <textarea required rows={4} placeholder="Enunciado" value={form.enunciado} onChange={set("enunciado")} className={input} />
       <div className="space-y-2">
         <p className="text-sm font-semibold">Alternativas <span className="font-normal text-muted-foreground">(marque a correta)</span></p>

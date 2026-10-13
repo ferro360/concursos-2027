@@ -147,6 +147,36 @@ export type Database = {
         }
         Relationships: []
       }
+      question_assuntos: {
+        Row: {
+          assunto_id: number
+          question_id: number
+        }
+        Insert: {
+          assunto_id: number
+          question_id: number
+        }
+        Update: {
+          assunto_id?: number
+          question_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_assuntos_assunto_id_fkey"
+            columns: ["assunto_id"]
+            isOneToOne: false
+            referencedRelation: "assuntos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_assuntos_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questions: {
         Row: {
           alternativas: string[]
