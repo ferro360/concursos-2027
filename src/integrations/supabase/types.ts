@@ -14,13 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          acertou: boolean
+          alternativa: number
+          created_at: string
+          question_id: number
+          user_id: string
+        }
+        Insert: {
+          acertou?: boolean
+          alternativa: number
+          created_at?: string
+          question_id: number
+          user_id: string
+        }
+        Update: {
+          acertou?: boolean
+          alternativa?: number
+          created_at?: string
+          question_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          alternativas: string[]
+          ano: number
+          assunto: string
+          banca: string
+          comentario: string
+          correta: number
+          created_at: string
+          created_by: string | null
+          disciplina: string
+          enunciado: string
+          id: number
+          orgao: string
+        }
+        Insert: {
+          alternativas: string[]
+          ano: number
+          assunto: string
+          banca: string
+          comentario?: string
+          correta: number
+          created_at?: string
+          created_by?: string | null
+          disciplina: string
+          enunciado: string
+          id?: number
+          orgao: string
+        }
+        Update: {
+          alternativas?: string[]
+          ano?: number
+          assunto?: string
+          banca?: string
+          comentario?: string
+          correta?: number
+          created_at?: string
+          created_by?: string | null
+          disciplina?: string
+          enunciado?: string
+          id?: number
+          orgao?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_ranking: {
+        Args: never
+        Returns: {
+          acertos: number
+          resolvidas: number
+          user_id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
