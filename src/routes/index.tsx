@@ -139,6 +139,11 @@ function Index() {
   );
 }
 
+function youtubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  return m?.[1] ?? null;
+}
+
 function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Question; assuntos: string[]; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const [showCom, setShowCom] = useState(false);
