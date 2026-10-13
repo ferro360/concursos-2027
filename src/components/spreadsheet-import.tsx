@@ -66,7 +66,7 @@ export function SpreadsheetImport() {
         const orgao_id = await getId("orgaos", r.orgao);
         const { data: created, error } = await supabase.from("questions").insert({
           disciplina_id, assunto_id: assunto_ids[0], banca_id, orgao_id,
-          disciplina: r.disciplina, assunto: assuntos[0], banca: r.banca, orgao: r.orgao,
+          disciplina: r.disciplina, assunto: assuntos[0]!, banca: r.banca, orgao: r.orgao,
           ano: Number(r.ano) || new Date().getFullYear(), enunciado: r.enunciado, alternativas, correta,
           comentario: r.comentario || undefined, imagem_url: r.imagem_url || undefined, video_url: r.video_url || undefined,
           created_by: u.user!.id,
