@@ -84,7 +84,7 @@ function Index() {
   );
 }
 
-function QuestionCard({ q, n, answered, onAnswer }: { q: Question; n: number; answered?: number; onAnswer: (a: number) => void }) {
+function QuestionCard({ q, n, answered, onAnswer }: { q: Question; n: number; answered?: number | undefined; onAnswer: (a: number) => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const [showCom, setShowCom] = useState(false);
   const isAnswered = answered !== undefined;
