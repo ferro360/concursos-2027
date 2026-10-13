@@ -60,7 +60,7 @@ ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}`;
       const out = await result.output;
       const questoes = out.questoes.filter((q) => {
         if (ce) { q.alternativas = ["Certo", "Errado"]; return q.correta === 0 || q.correta === 1; }
-        q.alternativas = q.alternativas.map((a) => a.trim()).filter(Boolean).slice(0, 5);
+        q.alternativas = q.alternativas.map((a) => a.trim().replace(/^[A-Ea-e][).:-]\s+/, "")).filter(Boolean).slice(0, 5);
         return q.alternativas.length >= 2 && q.correta >= 0 && q.correta < q.alternativas.length;
       });
       return { questoes };
