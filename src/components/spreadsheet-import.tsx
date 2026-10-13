@@ -24,14 +24,16 @@ export function SpreadsheetImport() {
     setBusy(true); setLog([]);
     const XLSX = await import("xlsx");
     const wb = XLSX.read(await file.arrayBuffer());
-    const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-    const rows = raw.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [key(k.trim()), norm(v)])));
+    const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]!]!, { defval: "" });
+    type Row = Record<"disciplina" | "assuntos" | "assunto" | "banca" | "orgao" | "ano" | "enunciado" | "a" | "b" | "c" | "d" | "e" | "correta" | "comentario" | "imagem_url" | "video_url", string>;
+    const rows = raw.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [key(k.trim()), norm(v)])) as Row);
     const { data: u } = await supabase.auth.getUser();
     const cache = new Map<string, number>();
     const getId = async (tabela: "disciplinas" | "bancas" | "orgaos" | "assuntos", nome: string, disciplina_id?: number) => {
       const ck = `${tabela}|${disciplina_id ?? ""}|${key(nome)}`;
       if (cache.has(ck)) return cache.get(ck)!;
-      let q = supabase.from(tabela).select("id").ilike("nome", nome);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase.from(tabela).select("id").ilike("nome", nome);
       if (tabela === "assuntos") q = q.eq("disciplina_id", disciplina_id!);
       const { data } = await q.limit(1);
       let id = data?.[0]?.id as number | undefined;
@@ -50,7 +52,7 @@ export function SpreadsheetImport() {
     for (const [i, r] of rows.entries()) {
       const linha = i + 2;
       try {
-        const alternativas = ["a", "b", "c", "d", "e"].map((l) => r[l]).filter(Boolean);
+        const alternativas = ["a", "b", "c", "d", "e"].map((l) => r[l as keyof Row]).filter(Boolean);
         const letra = (r.correta ?? "").toUpperCase();
         const correta = /^[A-E]$/.test(letra) ? letra.charCodeAt(0) - 65 : Number(letra) - 1;
         const assuntos = (r.assuntos || r.assunto || "").split(/[;|]/).map((s) => s.trim()).filter(Boolean);
@@ -66,7 +68,7 @@ export function SpreadsheetImport() {
           disciplina_id, assunto_id: assunto_ids[0], banca_id, orgao_id,
           disciplina: r.disciplina, assunto: assuntos[0], banca: r.banca, orgao: r.orgao,
           ano: Number(r.ano) || new Date().getFullYear(), enunciado: r.enunciado, alternativas, correta,
-          comentario: r.comentario || null, imagem_url: r.imagem_url || null, video_url: r.video_url || null,
+          comentario: r.comentario || undefined, imagem_url: r.imagem_url || undefined, video_url: r.video_url || undefined,
           created_by: u.user!.id,
         }).select("id").single();
         if (error) throw new Error("erro ao salvar");
