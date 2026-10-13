@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
-export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "enunciado" | "comentario" | "alternativas" | "correta"> & {
+export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
   disciplina: string; assunto: string; banca: string; orgao: string;
   /** todos os assuntos marcados (inclui o principal, assunto_id) */
   assunto_ids: number[];
@@ -41,6 +41,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
   );
   const [form, setForm] = useState({
     ano: String(initial?.ano ?? new Date().getFullYear()), enunciado: initial?.enunciado ?? "", comentario: initial?.comentario ?? "",
+    imagem_url: initial?.imagem_url ?? "", video_url: initial?.video_url ?? "",
   });
   const [alts, setAlts] = useState(() => [...(initial?.alternativas ?? []), "", "", "", "", ""].slice(0, 5));
   const [correta, setCorreta] = useState(initial?.correta ?? 0);
@@ -122,6 +123,16 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
       </fieldset>
 
       <textarea required rows={4} placeholder="Enunciado" value={form.enunciado} onChange={set("enunciado")} className={input} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span className="font-semibold">Imagem <span className="font-normal text-muted-foreground">(opcional — link da imagem)</span></span>
+          <input type="url" placeholder="https://..." value={form.imagem_url} onChange={set("imagem_url")} className={input} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-semibold">Vídeo <span className="font-normal text-muted-foreground">(opcional — link do YouTube)</span></span>
+          <input type="url" placeholder="https://www.youtube.com/watch?v=..." value={form.video_url} onChange={set("video_url")} className={input} />
+        </label>
+      </div>
       <div className="space-y-2">
         <p className="text-sm font-semibold">Alternativas <span className="font-normal text-muted-foreground">(marque a correta)</span></p>
         {alts.map((a, i) => (

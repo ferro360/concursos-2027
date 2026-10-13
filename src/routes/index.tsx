@@ -139,6 +139,11 @@ function Index() {
   );
 }
 
+function youtubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  return m?.[1] ?? null;
+}
+
 function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Question; assuntos: string[]; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const [showCom, setShowCom] = useState(false);
@@ -156,6 +161,15 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
       </div>
       <div className="p-5">
         <p className="mb-4 whitespace-pre-line leading-relaxed">{q.enunciado}</p>
+        {q.imagem_url && (
+          <img src={q.imagem_url} alt="Imagem da questão" className="mb-4 max-h-96 rounded-lg border object-contain" />
+        )}
+        {youtubeId(q.video_url) && (
+          <div className="mb-4 aspect-video max-w-2xl overflow-hidden rounded-lg border">
+            <iframe className="h-full w-full" src={`https://www.youtube.com/embed/${youtubeId(q.video_url)}`}
+              title="Vídeo da questão" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+          </div>
+        )}
         <ul className="space-y-2">
           {q.alternativas.map((alt, i) => {
             const state = isAnswered
