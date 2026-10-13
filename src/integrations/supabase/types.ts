@@ -46,6 +46,89 @@ export type Database = {
           },
         ]
       }
+      assuntos: {
+        Row: {
+          created_at: string
+          disciplina_id: number
+          id: number
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          disciplina_id: number
+          id?: number
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          disciplina_id?: number
+          id?: number
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assuntos_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bancas: {
+        Row: {
+          created_at: string
+          id: number
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          nome?: string
+        }
+        Relationships: []
+      }
+      disciplinas: {
+        Row: {
+          created_at: string
+          id: number
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          nome?: string
+        }
+        Relationships: []
+      }
+      orgaos: {
+        Row: {
+          created_at: string
+          id: number
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          nome?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -69,45 +152,86 @@ export type Database = {
           alternativas: string[]
           ano: number
           assunto: string
+          assunto_id: number | null
           banca: string
+          banca_id: number | null
           comentario: string
           correta: number
           created_at: string
           created_by: string | null
           disciplina: string
+          disciplina_id: number | null
           enunciado: string
           id: number
           orgao: string
+          orgao_id: number | null
         }
         Insert: {
           alternativas: string[]
           ano: number
           assunto: string
+          assunto_id?: number | null
           banca: string
+          banca_id?: number | null
           comentario?: string
           correta: number
           created_at?: string
           created_by?: string | null
           disciplina: string
+          disciplina_id?: number | null
           enunciado: string
           id?: number
           orgao: string
+          orgao_id?: number | null
         }
         Update: {
           alternativas?: string[]
           ano?: number
           assunto?: string
+          assunto_id?: number | null
           banca?: string
+          banca_id?: number | null
           comentario?: string
           correta?: number
           created_at?: string
           created_by?: string | null
           disciplina?: string
+          disciplina_id?: number | null
           enunciado?: string
           id?: number
           orgao?: string
+          orgao_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questions_assunto_id_fkey"
+            columns: ["assunto_id"]
+            isOneToOne: false
+            referencedRelation: "assuntos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_banca_id_fkey"
+            columns: ["banca_id"]
+            isOneToOne: false
+            referencedRelation: "bancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_orgao_id_fkey"
+            columns: ["orgao_id"]
+            isOneToOne: false
+            referencedRelation: "orgaos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
