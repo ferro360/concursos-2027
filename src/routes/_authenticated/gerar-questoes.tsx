@@ -46,7 +46,7 @@ function GerarQuestoes() {
   const onGerar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ids.disciplina || !ids.banca || !ids.orgao) { toast.error("Selecione disciplina, banca e órgão."); return; }
-    if (!assuntoIds.length) { toast.error("Marque ao menos um assunto."); return; }
+    if (!assuntoIds.length && !instrucoes.trim()) { toast.error("Marque ao menos um assunto ou descreva o tema nas instruções."); return; }
     setBusy(true);
     try {
       const r = await gerar({ data: {
@@ -71,13 +71,13 @@ function GerarQuestoes() {
     let ok = 0;
     for (const q of sel) {
       const { data: created, error } = await supabase.from("questions").insert({
-        disciplina_id: ids.disciplina!, assunto_id: assuntoIds[0]!, banca_id: ids.banca!, orgao_id: ids.orgao!, nivel_id: ids.nivel,
+        disciplina_id: ids.disciplina!, assunto_id: assuntoIds[0] ?? null, banca_id: ids.banca!, orgao_id: ids.orgao!, nivel_id: ids.nivel,
         disciplina: "", assunto: "", banca: "", orgao: "", nivel: "",
         ano, tipo, enunciado: q.enunciado.trim(), alternativas: q.alternativas, correta: q.correta, comentario: q.comentario.trim(),
         created_by: u.user!.id,
       }).select("id").single();
       if (error) continue;
-      await supabase.from("question_assuntos").insert(assuntoIds.map((assunto_id) => ({ question_id: created.id, assunto_id })));
+      if (assuntoIds.length) await supabase.from("question_assuntos").insert(assuntoIds.map((assunto_id) => ({ question_id: created.id, assunto_id })));
       ok++;
     }
     setSaving(false);
@@ -129,7 +129,7 @@ function GerarQuestoes() {
             </div>
           </div>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold">Assuntos</legend>
+            <legend className="text-sm font-semibold">Assuntos <span className="font-normal text-muted-foreground">(opcional — se não marcar, descreva o tema nas instruções)</span></legend>
             {!ids.disciplina ? <p className="text-sm text-muted-foreground">Escolha a disciplina primeiro.</p> : (
               <div className="grid max-h-48 gap-1 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
                 {assuntos.map((a) => (
@@ -143,7 +143,7 @@ function GerarQuestoes() {
               </div>
             )}
           </fieldset>
-          <textarea rows={2} maxLength={2000} placeholder="Instruções extras (opcional) — ex.: foque em jurisprudência do STF, nível difícil..." value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} className={input} />
+          <textarea rows={2} maxLength={2000} placeholder="Instruções — ex.: tema/assunto que servirá de base (quando não estiver cadastrado), foco em jurisprudência do STF, nível difícil..." value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} className={input} />
           <button disabled={busy} className="rounded-md bg-accent px-6 py-2 font-semibold text-accent-foreground disabled:opacity-50">
             {busy ? "Gerando... (pode levar até 1 minuto)" : "Gerar questões"}
           </button>
