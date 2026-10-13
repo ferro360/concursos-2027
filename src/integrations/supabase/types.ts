@@ -193,8 +193,10 @@ export type Database = {
           disciplina_id: number | null
           enunciado: string
           id: number
+          imagem_url: string
           orgao: string
           orgao_id: number | null
+          video_url: string
         }
         Insert: {
           alternativas: string[]
@@ -211,8 +213,10 @@ export type Database = {
           disciplina_id?: number | null
           enunciado: string
           id?: number
+          imagem_url?: string
           orgao: string
           orgao_id?: number | null
+          video_url?: string
         }
         Update: {
           alternativas?: string[]
@@ -229,8 +233,10 @@ export type Database = {
           disciplina_id?: number | null
           enunciado?: string
           id?: number
+          imagem_url?: string
           orgao?: string
           orgao_id?: number | null
+          video_url?: string
         }
         Relationships: [
           {
