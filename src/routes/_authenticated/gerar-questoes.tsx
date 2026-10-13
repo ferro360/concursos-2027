@@ -150,7 +150,7 @@ function GerarQuestoes() {
             <span className="text-xs text-muted-foreground">{conteudo.length.toLocaleString("pt-BR")} / 60.000 caracteres</span>
           </label>
           <textarea rows={2} maxLength={2000} placeholder="Instruções — ex.: tema/assunto que servirá de base (quando não estiver cadastrado), foco em jurisprudência do STF, nível difícil..." value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} className={input} />
-          <button disabled={busy} className="rounded-md bg-accent px-6 py-2 font-semibold text-accent-foreground disabled:opacity-50">
+          <button disabled={busy} className="rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift disabled:opacity-50">
             {busy ? "Gerando... (pode levar até 1 minuto)" : "Gerar questões"}
           </button>
         </form>
