@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { comentarQuestao } from "@/lib/ai-questions.functions";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
@@ -49,6 +51,27 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
   const [alts, setAlts] = useState(() => [...(initial?.alternativas ?? []), "", "", "", "", ""].slice(0, 5));
   const [correta, setCorreta] = useState(initial?.correta ?? 0);
   const [saving, setSaving] = useState(false);
+  const [comentando, setComentando] = useState(false);
+  const comentarFn = useServerFn(comentarQuestao);
+  const comentarIA = async () => {
+    if (!form.enunciado.trim()) { toast.error("Escreva o enunciado primeiro."); return; }
+    const alternativas = tipo === "certo_errado" ? CE : alts.map((a) => a.trim()).filter(Boolean);
+    if (tipo === "multipla_escolha" && alternativas.length < 2) { toast.error("Preencha as alternativas primeiro."); return; }
+    if (form.comentario.trim() && !confirm("Substituir o comentário atual pelo da IA?")) return;
+    const nome = (lista: { id: number; nome: string }[] | undefined, id: number | null) => lista?.find((x) => x.id === id)?.nome ?? "";
+    const d = data as any;
+    setComentando(true);
+    try {
+      const r = await comentarFn({ data: {
+        tipo, enunciado: form.enunciado, alternativas, correta,
+        disciplina: nome(d?.disciplinas, ids.disciplina_id), banca: nome(d?.bancas, ids.banca_id),
+        assuntos: assuntoIds.map((id) => nome(d?.assuntos, id)).filter(Boolean),
+      } });
+      if (r.error) toast.error(r.error);
+      else { setForm((f) => ({ ...f, comentario: r.comentario })); toast.success("Comentário gerado. Revise antes de salvar."); }
+    } catch { toast.error("Não foi possível gerar o comentário agora."); }
+    finally { setComentando(false); }
+  };
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
 
   const toggleAssunto = (id: number) =>
@@ -166,7 +189,17 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
           </label>
         ))}
       </div>
-      <textarea rows={3} placeholder="Comentário / explicação (opcional)" value={form.comentario} onChange={set("comentario")} className={input} />
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Comentário <span className="font-normal text-muted-foreground">(opcional)</span></span>
+          <button type="button" onClick={comentarIA} disabled={comentando}
+            className="rounded-full bg-secondary px-4 py-1.5 text-sm font-semibold text-secondary-foreground transition hover:shadow-soft disabled:opacity-50">
+            {comentando ? "A IA está comentando..." : "Comentar com IA"}
+          </button>
+        </div>
+        <textarea rows={comentando || form.comentario.length > 300 ? 10 : 3} placeholder="Comentário / explicação, ou clique em Comentar com IA (usa o enunciado, as alternativas e o gabarito marcado)"
+          value={form.comentario} onChange={set("comentario")} className={input} />
+      </div>
       <button disabled={saving} className="rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift disabled:opacity-50">
         {saving ? "Salvando..." : submitLabel}
       </button>
