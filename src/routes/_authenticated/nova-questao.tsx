@@ -29,10 +29,15 @@ function NovaQuestao() {
         <h1 className="mb-6 font-display text-3xl font-bold">Nova questão</h1>
         <QuestionForm submitLabel="Cadastrar questão" onSubmit={async (q) => {
           const { data: u } = await supabase.auth.getUser();
-          const { error } = await supabase.from("questions").insert({ ...q, created_by: u.user!.id });
+          const { assunto_ids, ...rest } = q;
+          const { data: created, error } = await supabase.from("questions").insert({ ...rest, created_by: u.user!.id }).select("id").single();
           if (error) { toast.error("Erro ao salvar a questão."); return; }
+          const { error: linkError } = await supabase.from("question_assuntos")
+            .insert(assunto_ids.map((assunto_id) => ({ question_id: created.id, assunto_id })));
+          if (linkError) { toast.error("Questão salva, mas houve erro ao vincular os assuntos."); return; }
           toast.success("Questão cadastrada!");
           qc.invalidateQueries({ queryKey: ["questions"] });
+          qc.invalidateQueries({ queryKey: ["question-assuntos"] });
           navigate({ to: "/" });
         }} />
       </main>
