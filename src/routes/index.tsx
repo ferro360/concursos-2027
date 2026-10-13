@@ -130,7 +130,7 @@ function Index() {
 
         <div className="space-y-6">
           {list.map((q) => (
-            <QuestionCard key={q.id} q={q} canAnswer={!!user} answered={answers[q.id]?.alternativa}
+            <QuestionCard key={q.id} q={q} assuntos={assuntosDe(q)} canAnswer={!!user} answered={answers[q.id]?.alternativa}
               onAnswer={(a) => responder(q, a)} />
           ))}
         </div>
@@ -139,7 +139,7 @@ function Index() {
   );
 }
 
-function QuestionCard({ q, canAnswer, answered, onAnswer }: { q: Question; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
+function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Question; assuntos: string[]; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const [showCom, setShowCom] = useState(false);
   const isAnswered = answered !== undefined;
@@ -149,7 +149,7 @@ function QuestionCard({ q, canAnswer, answered, onAnswer }: { q: Question; canAn
     <article className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-b bg-muted px-4 py-2 text-xs text-muted-foreground">
         <b className="text-foreground">Q{q.id}</b>
-        <span>{q.disciplina} › {q.assunto}</span>
+        <span>{q.disciplina} › {assuntos.join(", ")}</span>
         <span>Banca: {q.banca}</span>
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>
