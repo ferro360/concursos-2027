@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
-const TABS: [CadastroTabela, string][] = [["disciplinas", "Disciplinas"], ["assuntos", "Assuntos"], ["bancas", "Bancas"], ["orgaos", "Órgãos"]];
+const TABS: [CadastroTabela, string][] = [["disciplinas", "Disciplinas"], ["assuntos", "Assuntos"], ["bancas", "Bancas"], ["orgaos", "Órgãos"], ["niveis", "Níveis"]];
 
 export function AdminCadastros() {
   const { data, adicionar, refresh } = useCadastros();

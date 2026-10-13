@@ -14,14 +14,14 @@ const CE = ["Certo", "Errado"];
 const NOVO = "__novo__";
 const input = "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 
-function CadastroSelect({ label, value, options, onChange, onNovo, disabled }: {
+function CadastroSelect({ label, value, options, onChange, onNovo, disabled, opcional }: {
   label: string; value: number | null; options: { id: number; nome: string }[];
-  onChange: (id: number | null) => void; onNovo: () => void; disabled?: boolean;
+  onChange: (id: number | null) => void; onNovo: () => void; disabled?: boolean; opcional?: boolean;
 }) {
   return (
     <label className="space-y-1 text-sm">
-      <span className="font-semibold">{label}</span>
-      <select required disabled={disabled} value={value ?? ""} className={input}
+      <span className="font-semibold">{label}{opcional && <span className="font-normal text-muted-foreground"> (opcional)</span>}</span>
+      <select required={!opcional} disabled={disabled} value={value ?? ""} className={input}
         onChange={(e) => (e.target.value === NOVO ? onNovo() : onChange(e.target.value ? Number(e.target.value) : null))}>
         <option value="">{disabled ? "Escolha a disciplina primeiro" : "Selecione..."}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
@@ -98,7 +98,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
           onChange={(v) => setIds({ ...ids, banca_id: v })} onNovo={() => novo("bancas", "banca_id", "banca")} />
         <CadastroSelect label="Órgão" value={ids.orgao_id} options={data.orgaos}
           onChange={(v) => setIds({ ...ids, orgao_id: v })} onNovo={() => novo("orgaos", "orgao_id", "órgão")} />
-        <CadastroSelect label="Escolaridade / Nível" value={ids.nivel_id} options={data.niveis}
+        <CadastroSelect label="Escolaridade / Nível" value={ids.nivel_id} options={data.niveis} opcional
           onChange={(v) => setIds({ ...ids, nivel_id: v })} onNovo={() => novo("niveis", "nivel_id", "nível")} />
         <label className="space-y-1 text-sm">
           <span className="font-semibold">Ano</span>
