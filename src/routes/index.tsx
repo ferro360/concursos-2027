@@ -30,11 +30,15 @@ const FILTERS = [
   ["ano", "Ano"],
 ] as const;
 
+type Filtros = { campos: Record<string, string>; assunto: string; tipo: string; status: string; busca: string };
+const VAZIO: Filtros = { campos: {}, assunto: "", tipo: "", status: "", busca: "" };
+
 function Index() {
   const { user } = useSession();
   const qc = useQueryClient();
-  const [f, setF] = useState<Record<string, string>>({});
-  const [busca, setBusca] = useState("");
+  const [draft, setDraft] = useState<Filtros>(VAZIO);
+  const [aplicado, setAplicado] = useState<Filtros>(VAZIO);
+  const { campos: f, busca } = aplicado;
 
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["questions"],
