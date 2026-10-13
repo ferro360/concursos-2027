@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
-  assuntos: z.array(z.string().max(200)).min(1).max(10),
+  assuntos: z.array(z.string().max(200)).max(10),
   banca: z.string().max(200),
   nivel: z.string().max(200),
   tipo: z.enum(["multipla_escolha", "certo_errado"]),
@@ -44,7 +44,7 @@ ${ce
 "comentario" explica por que a resposta está certa e as demais erradas.`;
     const prompt = `Gere ${data.quantidade} questão(ões) inéditas.
 Disciplina: ${data.disciplina}
-Assunto(s): ${data.assuntos.join(", ")}
+${data.assuntos.length ? `Assunto(s): ${data.assuntos.join(", ")}` : "Assunto livre: defina o tema a partir das instruções adicionais."}
 ${data.banca ? `Estilo da banca: ${data.banca}` : ""}
 ${data.nivel ? `Escolaridade: ${data.nivel}` : ""}
 ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}`;
