@@ -60,12 +60,12 @@ export function SpreadsheetImport() {
         if (alternativas.length < 2) throw new Error("mínimo de 2 alternativas");
         if (!(correta >= 0 && correta < alternativas.length)) throw new Error("resposta correta inválida");
         const disciplina_id = await getId("disciplinas", r.disciplina);
-        const assunto_ids = [];
+        const assunto_ids: number[] = [];
         for (const a of assuntos) assunto_ids.push(await getId("assuntos", a, disciplina_id));
         const banca_id = await getId("bancas", r.banca);
         const orgao_id = await getId("orgaos", r.orgao);
         const { data: created, error } = await supabase.from("questions").insert({
-          disciplina_id, assunto_id: assunto_ids[0], banca_id, orgao_id,
+          disciplina_id, assunto_id: assunto_ids[0]!, banca_id, orgao_id,
           disciplina: r.disciplina, assunto: assuntos[0]!, banca: r.banca, orgao: r.orgao,
           ano: Number(r.ano) || new Date().getFullYear(), enunciado: r.enunciado, alternativas, correta,
           comentario: r.comentario || undefined, imagem_url: r.imagem_url || undefined, video_url: r.video_url || undefined,
