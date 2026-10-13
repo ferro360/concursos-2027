@@ -78,12 +78,19 @@ function Index() {
 
   const assuntosDe = (q: Question) => assuntosPorQuestao[q.id]?.filter(Boolean) ?? [q.assunto];
 
-  const list = useMemo(() => questions.filter((q) =>
-    FILTERS.every(([k]) => !f[k] || String(q[k]) === f[k]) &&
-    (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()))
-  ), [questions, f, busca, assuntosPorQuestao]);
+  const list = useMemo(() => questions.filter((q) => {
+    const a = answers[q.id];
+    const st = aplicado.status;
+    return FILTERS.every(([k]) => !f[k] || String(q[k]) === f[k]) &&
+      (!aplicado.assunto || assuntosDe(q).includes(aplicado.assunto)) &&
+      (!aplicado.tipo || q.tipo === aplicado.tipo) &&
+      (!st || (st === "nao" ? !a : st === "resolvidas" ? !!a : st === "acertei" ? !!a?.acertou : !!a && !a.acertou)) &&
+      (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()));
+  }), [questions, f, busca, aplicado, answers, assuntosPorQuestao]);
 
   const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
+  const dDisc = draft.campos.disciplina;
+  const assuntoOptions = Array.from(new Set(questions.filter((q) => !dDisc || q.disciplina === dDisc).flatMap(assuntosDe))).filter(Boolean).sort();
   const vals = Object.values(answers);
   const done = vals.length;
   const hits = vals.filter((a) => a.acertou).length;
@@ -117,20 +124,49 @@ function Index() {
           </p>
         )}
 
-        <section className="mb-8 rounded-xl border bg-card p-4 shadow-sm">
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por palavra-chave ou assunto..."
+        <form className="mb-8 rounded-xl border bg-card p-4 shadow-sm"
+          onSubmit={(e) => { e.preventDefault(); setAplicado(draft); }}>
+          <h2 className="mb-3 font-semibold">Filtrar questões</h2>
+          <input value={draft.busca} onChange={(e) => setDraft({ ...draft, busca: e.target.value })} placeholder="Palavra-chave no enunciado ou assunto..."
             className="mb-3 w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-ring" />
           <div className="grid gap-3 sm:grid-cols-4">
             {FILTERS.map(([k, label]) => (
-              <select key={k} value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })}
+              <select key={k} value={draft.campos[k] ?? ""}
+                onChange={(e) => setDraft({ ...draft, campos: { ...draft.campos, [k]: e.target.value }, ...(k === "disciplina" ? { assunto: "" } : {}) })}
                 className="rounded-md border bg-background px-3 py-2 text-sm">
                 <option value="">{label}: todas</option>
                 {options(k).map((v) => <option key={v}>{v}</option>)}
               </select>
             ))}
+            <select value={draft.assunto} onChange={(e) => setDraft({ ...draft, assunto: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm">
+              <option value="">Assunto: todos</option>
+              {assuntoOptions.map((v) => <option key={v}>{v}</option>)}
+            </select>
+            <select value={draft.tipo} onChange={(e) => setDraft({ ...draft, tipo: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm">
+              <option value="">Tipo: todos</option>
+              <option value="multipla_escolha">Múltipla escolha</option>
+              <option value="certo_errado">Certo/Errado</option>
+            </select>
+            {user && (
+              <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}
+                className="rounded-md border bg-background px-3 py-2 text-sm">
+                <option value="">Situação: todas</option>
+                <option value="nao">Não resolvidas</option>
+                <option value="resolvidas">Resolvidas</option>
+                <option value="acertei">Acertei</option>
+                <option value="errei">Errei</option>
+              </select>
+            )}
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{isLoading ? "Carregando..." : `${list.length} questões encontradas`}</p>
-        </section>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button type="submit" className="rounded-md bg-accent px-5 py-2 font-semibold text-accent-foreground">Aplicar filtros</button>
+            <button type="button" className="text-sm text-muted-foreground underline"
+              onClick={() => { setDraft(VAZIO); setAplicado(VAZIO); }}>Limpar</button>
+            <p className="text-sm text-muted-foreground">{isLoading ? "Carregando..." : `${list.length} questões encontradas`}</p>
+          </div>
+        </form>
 
         <div className="space-y-6">
           {list.map((q) => (
