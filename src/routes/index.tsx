@@ -68,7 +68,7 @@ function Index() {
   const responder = async (q: Question, alt: number) => {
     if (!user) return;
     const { error } = await supabase.from("answers").insert({ user_id: user.id, question_id: q.id, alternativa: alt });
-    if (error) return toast.error("Não foi possível salvar sua resposta.");
+    if (error) { toast.error("Não foi possível salvar sua resposta."); return; }
     qc.invalidateQueries({ queryKey: ["answers", user.id] });
   };
 

@@ -33,17 +33,18 @@ function NovaQuestao() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const filled = alts.map((a) => a.trim());
-    const last = filled.findLastIndex((a) => a);
+    let last = filled.length - 1;
+    while (last >= 0 && !filled[last]) last--;
     const alternativas = filled.slice(0, last + 1);
-    if (alternativas.length < 2 || alternativas.some((a) => !a)) return toast.error("Preencha ao menos 2 alternativas, em sequência.");
-    if (correta >= alternativas.length) return toast.error("A alternativa correta está vazia.");
+    if (alternativas.length < 2 || alternativas.some((a) => !a)) { toast.error("Preencha ao menos 2 alternativas, em sequência."); return; }
+    if (correta >= alternativas.length) { toast.error("A alternativa correta está vazia."); return; }
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("questions").insert({
       ...form, ano: Number(form.ano), alternativas, correta, created_by: u.user!.id,
     });
     setSaving(false);
-    if (error) return toast.error("Erro ao salvar a questão.");
+    if (error) { toast.error("Erro ao salvar a questão."); return; }
     toast.success("Questão cadastrada!");
     qc.invalidateQueries({ queryKey: ["questions"] });
     navigate({ to: "/" });
