@@ -158,6 +158,7 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
         <span>Banca: {q.banca}</span>
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>
+        <span>{ce ? "Certo/Errado" : "Múltipla escolha"}</span>
       </div>
       <div className="p-5">
         <p className="mb-4 whitespace-pre-line leading-relaxed">{q.enunciado}</p>
@@ -171,7 +172,7 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
           </div>
         )}
         <ul className="space-y-2">
-          {q.alternativas.map((alt, i) => {
+          {(ce ? CE : q.alternativas).map((alt, i) => {
             const state = isAnswered
               ? i === q.correta ? "border-success bg-success/10" : i === answered ? "border-destructive bg-destructive/10" : ""
               : sel === i ? "border-primary bg-primary/5" : "";
@@ -179,8 +180,8 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
               <li key={i}>
                 <button disabled={isAnswered || !canAnswer} onClick={() => setSel(i)}
                   className={`flex w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition hover:bg-muted disabled:cursor-default ${state}`}>
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-semibold">{letters[i]}</span>
-                  {alt}
+                  {!ce && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-semibold">{letters[i]}</span>}
+                  <span className={ce ? "font-semibold" : ""}>{alt}</span>
                 </button>
               </li>
             );
@@ -192,7 +193,7 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
               className="rounded-md bg-accent px-5 py-2 font-semibold text-accent-foreground disabled:opacity-40">Responder</button>
           ) : (
             <span className={`font-semibold ${answered === q.correta ? "text-success" : "text-destructive"}`}>
-              {answered === q.correta ? "Parabéns! Você acertou." : `Você errou. Gabarito: ${letters[q.correta]}`}
+              {answered === q.correta ? "Parabéns! Você acertou." : `Você errou. Gabarito: ${ce ? CE[q.correta] : letters[q.correta]}`}
             </span>
           )}
           {q.comentario && (
