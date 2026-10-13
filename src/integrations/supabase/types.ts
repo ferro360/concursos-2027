@@ -111,6 +111,24 @@ export type Database = {
         }
         Relationships: []
       }
+      niveis: {
+        Row: {
+          created_at: string
+          id: number
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          nome?: string
+        }
+        Relationships: []
+      }
       orgaos: {
         Row: {
           created_at: string
@@ -194,6 +212,8 @@ export type Database = {
           enunciado: string
           id: number
           imagem_url: string
+          nivel: string
+          nivel_id: number | null
           orgao: string
           orgao_id: number | null
           tipo: string
@@ -215,6 +235,8 @@ export type Database = {
           enunciado: string
           id?: number
           imagem_url?: string
+          nivel?: string
+          nivel_id?: number | null
           orgao: string
           orgao_id?: number | null
           tipo?: string
@@ -236,6 +258,8 @@ export type Database = {
           enunciado?: string
           id?: number
           imagem_url?: string
+          nivel?: string
+          nivel_id?: number | null
           orgao?: string
           orgao_id?: number | null
           tipo?: string
@@ -261,6 +285,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_nivel_id_fkey"
+            columns: ["nivel_id"]
+            isOneToOne: false
+            referencedRelation: "niveis"
             referencedColumns: ["id"]
           },
           {

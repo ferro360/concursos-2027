@@ -2,20 +2,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-export type CadastroTabela = "disciplinas" | "assuntos" | "bancas" | "orgaos";
+export type CadastroTabela = "disciplinas" | "assuntos" | "bancas" | "orgaos" | "niveis";
 
 export function useCadastros() {
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["cadastros"],
     queryFn: async () => {
-      const [d, a, b, o] = await Promise.all([
+      const [d, a, b, o, n] = await Promise.all([
         supabase.from("disciplinas").select("*").order("nome"),
         supabase.from("assuntos").select("*").order("nome"),
         supabase.from("bancas").select("*").order("nome"),
         supabase.from("orgaos").select("*").order("nome"),
+        supabase.from("niveis").select("*").order("nome"),
       ]);
-      return { disciplinas: d.data ?? [], assuntos: a.data ?? [], bancas: b.data ?? [], orgaos: o.data ?? [] };
+      return { disciplinas: d.data ?? [], assuntos: a.data ?? [], bancas: b.data ?? [], orgaos: o.data ?? [], niveis: n.data ?? [] };
     },
   });
 
@@ -30,5 +31,5 @@ export function useCadastros() {
     return res.data.id;
   };
 
-  return { data: q.data ?? { disciplinas: [], assuntos: [], bancas: [], orgaos: [] }, adicionar, refresh: () => qc.invalidateQueries({ queryKey: ["cadastros"] }) };
+  return { data: q.data ?? { disciplinas: [], assuntos: [], bancas: [], orgaos: [], niveis: [] }, adicionar, refresh: () => qc.invalidateQueries({ queryKey: ["cadastros"] }) };
 }

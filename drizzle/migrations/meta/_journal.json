@@ -43,6 +43,13 @@
       "when": 1791914849968,
       "tag": "0005_criar_tipo_questao_certo_errado",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791917308285,
+      "tag": "0006_niveis_escolaridade",
+      "breakpoints": true
     }
   ]
 }

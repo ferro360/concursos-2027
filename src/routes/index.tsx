@@ -27,6 +27,7 @@ const FILTERS = [
   ["disciplina", "Disciplina"],
   ["banca", "Banca"],
   ["orgao", "Órgão"],
+  ["nivel", "Nível"],
   ["ano", "Ano"],
 ] as const;
 
@@ -200,6 +201,7 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
         <span>Banca: {q.banca}</span>
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>
+        {q.nivel && <span>Nível: {q.nivel}</span>}
         <span>{ce ? "Certo/Errado" : "Múltipla escolha"}</span>
       </div>
       <div className="p-5">

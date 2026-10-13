@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
-export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "ano" | "tipo" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
-  disciplina: string; assunto: string; banca: string; orgao: string;
+export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "nivel_id" | "ano" | "tipo" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
+  disciplina: string; assunto: string; banca: string; orgao: string; nivel: string;
   /** todos os assuntos marcados (inclui o principal, assunto_id) */
   assunto_ids: number[];
 };
@@ -14,14 +14,14 @@ const CE = ["Certo", "Errado"];
 const NOVO = "__novo__";
 const input = "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 
-function CadastroSelect({ label, value, options, onChange, onNovo, disabled }: {
+function CadastroSelect({ label, value, options, onChange, onNovo, disabled, opcional }: {
   label: string; value: number | null; options: { id: number; nome: string }[];
-  onChange: (id: number | null) => void; onNovo: () => void; disabled?: boolean;
+  onChange: (id: number | null) => void; onNovo: () => void; disabled?: boolean; opcional?: boolean;
 }) {
   return (
     <label className="space-y-1 text-sm">
-      <span className="font-semibold">{label}</span>
-      <select required disabled={disabled} value={value ?? ""} className={input}
+      <span className="font-semibold">{label}{opcional && <span className="font-normal text-muted-foreground"> (opcional)</span>}</span>
+      <select required={!opcional} disabled={disabled} value={value ?? ""} className={input}
         onChange={(e) => (e.target.value === NOVO ? onNovo() : onChange(e.target.value ? Number(e.target.value) : null))}>
         <option value="">{disabled ? "Escolha a disciplina primeiro" : "Selecione..."}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
@@ -36,6 +36,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
   const [ids, setIds] = useState({
     disciplina_id: initial?.disciplina_id ?? null,
     banca_id: initial?.banca_id ?? null, orgao_id: initial?.orgao_id ?? null,
+    nivel_id: initial?.nivel_id ?? null,
   });
   const [assuntoIds, setAssuntoIds] = useState<number[]>(
     initial?.assunto_ids ?? (initial?.assunto_id ? [initial.assunto_id] : [])
@@ -82,7 +83,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     // names are filled in by the database from the linked records
     await onSubmit({
       ...ids, ...form, assunto_id: assuntoIds[0] ?? null, assunto_ids: assuntoIds,
-      disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), tipo, alternativas, correta,
+      disciplina: "", assunto: "", banca: "", orgao: "", nivel: "", ano: Number(form.ano), tipo, alternativas, correta,
     });
     setSaving(false);
   };
@@ -97,6 +98,8 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
           onChange={(v) => setIds({ ...ids, banca_id: v })} onNovo={() => novo("bancas", "banca_id", "banca")} />
         <CadastroSelect label="Órgão" value={ids.orgao_id} options={data.orgaos}
           onChange={(v) => setIds({ ...ids, orgao_id: v })} onNovo={() => novo("orgaos", "orgao_id", "órgão")} />
+        <CadastroSelect label="Escolaridade / Nível" value={ids.nivel_id} options={data.niveis} opcional
+          onChange={(v) => setIds({ ...ids, nivel_id: v })} onNovo={() => novo("niveis", "nivel_id", "nível")} />
         <label className="space-y-1 text-sm">
           <span className="font-semibold">Ano</span>
           <input required type="number" min={1950} max={2100} value={form.ano} onChange={set("ano")} className={input} />
