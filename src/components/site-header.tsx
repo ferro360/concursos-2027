@@ -2,9 +2,11 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export function SiteHeader() {
   const { user } = useSession();
+  const { isAdmin } = useIsAdmin();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const sair = async () => {
@@ -24,6 +26,7 @@ export function SiteHeader() {
           {user ? (
             <>
               <Link to="/nova-questao" className={link}>Nova questão</Link>
+              {isAdmin && <Link to="/admin" className={link}>Admin</Link>}
               <button onClick={sair} className="rounded-md bg-accent px-3 py-1.5 font-semibold text-accent-foreground">Sair</button>
             </>
           ) : (
