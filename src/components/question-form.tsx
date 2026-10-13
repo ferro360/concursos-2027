@@ -78,7 +78,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
     setSaving(true);
     // names are filled in by the database from the linked records
     await onSubmit({
-      ...ids, ...form, assunto_id: assuntoIds[0], assunto_ids: assuntoIds,
+      ...ids, ...form, assunto_id: assuntoIds[0] ?? null, assunto_ids: assuntoIds,
       disciplina: "", assunto: "", banca: "", orgao: "", ano: Number(form.ano), alternativas, correta,
     });
     setSaving(false);
