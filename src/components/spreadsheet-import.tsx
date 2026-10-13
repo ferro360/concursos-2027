@@ -68,7 +68,7 @@ export function SpreadsheetImport() {
           disciplina_id, assunto_id: assunto_ids[0]!, banca_id, orgao_id,
           disciplina: r.disciplina, assunto: assuntos[0]!, banca: r.banca, orgao: r.orgao,
           ano: Number(r.ano) || new Date().getFullYear(), enunciado: r.enunciado, alternativas, correta,
-          comentario: r.comentario || undefined, imagem_url: r.imagem_url || undefined, video_url: r.video_url || undefined,
+          ...(r.comentario ? { comentario: r.comentario } : {}), ...(r.imagem_url ? { imagem_url: r.imagem_url } : {}), ...(r.video_url ? { video_url: r.video_url } : {}),
           created_by: u.user!.id,
         }).select("id").single();
         if (error) throw new Error("erro ao salvar");
