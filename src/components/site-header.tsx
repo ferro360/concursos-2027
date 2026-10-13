@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import logoUrl from "@/assets/logo.png";
 
 export function SiteHeader() {
   const { user } = useSession();
@@ -19,7 +20,9 @@ export function SiteHeader() {
   return (
     <header className="border-b bg-primary text-primary-foreground">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-        <Link to="/" className="font-display text-2xl font-bold">Questões<span className="text-accent">.</span></Link>
+        <Link to="/" className="rounded-lg bg-card px-2.5 py-1.5 shadow-sm">
+          <img src={logoUrl} alt="Data5 Concursos" className="h-7 w-auto sm:h-8" />
+        </Link>
         <nav className="flex items-center gap-5 text-sm">
           <Link to="/" className={link} activeOptions={{ exact: true }}>Questões</Link>
           <Link to="/ranking" className={link}>Ranking</Link>
