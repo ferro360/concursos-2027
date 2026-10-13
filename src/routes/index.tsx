@@ -55,10 +55,29 @@ function Index() {
     },
   });
 
+  // mapa questão -> nomes de todos os assuntos vinculados
+  const { data: assuntosPorQuestao = {} } = useQuery({
+    queryKey: ["question-assuntos"],
+    queryFn: async () => {
+      const [{ data: links, error: e1 }, { data: assuntos, error: e2 }] = await Promise.all([
+        supabase.from("question_assuntos").select("question_id, assunto_id"),
+        supabase.from("assuntos").select("id, nome"),
+      ]);
+      if (e1) throw e1;
+      if (e2) throw e2;
+      const nomes = Object.fromEntries(assuntos.map((a) => [a.id, a.nome]));
+      const map: Record<number, string[]> = {};
+      for (const l of links) (map[l.question_id] ??= []).push(nomes[l.assunto_id] ?? "");
+      return map;
+    },
+  });
+
+  const assuntosDe = (q: Question) => assuntosPorQuestao[q.id]?.filter(Boolean) ?? [q.assunto];
+
   const list = useMemo(() => questions.filter((q) =>
     FILTERS.every(([k]) => !f[k] || String(q[k]) === f[k]) &&
-    (!busca || (q.enunciado + q.assunto).toLowerCase().includes(busca.toLowerCase()))
-  ), [questions, f, busca]);
+    (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()))
+  ), [questions, f, busca, assuntosPorQuestao]);
 
   const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
   const vals = Object.values(answers);
