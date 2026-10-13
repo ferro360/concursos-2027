@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Answers are graded by a database trigger (grade_answer) and ranking comes from the get_ranking() function, so clients cannot fake scores.
+- Questions link to disciplinas/assuntos/bancas/orgaos by id; the text name columns are filled by the sync_question_names trigger and renames propagate, so always write the ids.
