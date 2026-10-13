@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Answers are graded by a database trigger (grade_answer) and ranking comes from the get_ranking() function, so clients cannot fake scores.
