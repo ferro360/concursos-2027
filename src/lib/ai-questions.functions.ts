@@ -97,7 +97,7 @@ const ComentarInput = z.object({
 export const comentarQuestao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ComentarInput.parse(d))
-  .handler(async ({ data }): Promise<{ comentario: string; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ comentario: string; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { comentario: "", error: "IA não configurada." };
     const { createOpenAI } = await import("@ai-sdk/openai");
@@ -110,6 +110,11 @@ export const comentarQuestao = createServerFn({ method: "POST" })
     const ce = data.tipo === "certo_errado";
     const L = "ABCDE";
     const gabarito = ce ? (data.correta === 0 ? "CERTO" : "ERRADO") : `${L[data.correta]}`;
+    // Base de conhecimento da plataforma (busca inteligente + Jev).
+    const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
+    const base = trechos.length
+      ? `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; quando ele for relevante, fundamente com base nele e cite o nome do material entre parênteses):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`
+      : "";
     const instructions = `Você é um professor especialista em concursos públicos brasileiros que escreve comentários de questões (estilo professor do QConcursos). Escreva em português do Brasil, texto corrido simples (sem markdown, sem asteriscos, sem títulos com #).
 O gabarito informado é OFICIAL: fundamente-o, nunca o contradiga.
 Estrutura:
