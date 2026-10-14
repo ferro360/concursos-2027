@@ -128,7 +128,7 @@ Seja preciso e objetivo; não invente leis ou números de artigos se não tiver 
 Enunciado:
 ${data.enunciado}
 ${ce ? "" : "\nAlternativas:\n" + data.alternativas.map((a, i) => `${L[i]}) ${a}`).join("\n")}
-\nGabarito oficial: ${gabarito}`;
+\nGabarito oficial: ${gabarito}${base}`;
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
