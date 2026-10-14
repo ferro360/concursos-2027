@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { retrieveTrechos } from "./knowledge.functions";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
@@ -37,6 +38,14 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
       apiKey,
       headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     });
+    // Base de conhecimento da plataforma (busca inteligente + Jev), quando o usuário não colou conteúdo.
+    let base = "";
+    if (!data.conteudo) {
+      const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
+      if (trechos.length) {
+        base = `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; use como referência principal e mantenha fidelidade a ele):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`;
+      }
+    }
     const ce = data.tipo === "certo_errado";
     const instructions = `Você é um elaborador experiente de questões de concursos públicos brasileiros. Escreva em português do Brasil, com rigor técnico e sem erros factuais.
 ${ce
