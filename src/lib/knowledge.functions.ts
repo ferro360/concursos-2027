@@ -51,7 +51,12 @@ function jevHeaders(apiKey: string): HeadersInit {
 // Busca inteligente: embeddings + Jev (System One) julgando a relevância de cada trecho.
 export async function retrieveTrechos(
   apiKey: string,
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> },
+  supabase: {
+    rpc: (
+      fn: "match_knowledge",
+      args: { query_embedding: number[]; match_count?: number },
+    ) => Promise<{ data: unknown; error: { message: string } | null }>,
+  },
   consulta: string,
 ): Promise<TrechoConhecimento[]> {
   try {
