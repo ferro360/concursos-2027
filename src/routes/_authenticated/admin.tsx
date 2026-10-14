@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function Admin() {
   const { isAdmin, loading } = useIsAdmin();
-  const [tab, setTab] = useState<"questoes" | "cadastros" | "usuarios">("questoes");
+  const [tab, setTab] = useState<"questoes" | "cadastros" | "biblioteca" | "usuarios">("questoes");
   const tabCls = (t: string) => `rounded-md px-4 py-2 text-sm font-semibold ${tab === t ? "bg-primary text-primary-foreground" : "bg-muted"}`;
   return (
     <div className="min-h-screen bg-background">
@@ -42,9 +42,10 @@ function Admin() {
             <div className="mb-6 flex gap-2">
               <button className={tabCls("questoes")} onClick={() => setTab("questoes")}>Questões</button>
               <button className={tabCls("cadastros")} onClick={() => setTab("cadastros")}>Cadastros</button>
+              <button className={tabCls("biblioteca")} onClick={() => setTab("biblioteca")}>Biblioteca IA</button>
               <button className={tabCls("usuarios")} onClick={() => setTab("usuarios")}>Usuários</button>
             </div>
-            {tab === "questoes" ? <Questoes /> : tab === "cadastros" ? <AdminCadastros /> : <Usuarios />}
+            {tab === "questoes" ? <Questoes /> : tab === "cadastros" ? <AdminCadastros /> : tab === "biblioteca" ? <AdminBiblioteca /> : <Usuarios />}
           </>
         )}
       </main>
