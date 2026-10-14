@@ -54,14 +54,14 @@ export async function retrieveTrechos(
   supabase: {
     rpc: (
       fn: "match_knowledge",
-      args: { query_embedding: number[]; match_count?: number },
+      args: { query_embedding: string; match_count?: number },
     ) => Promise<{ data: unknown; error: { message: string } | null }>,
   },
   consulta: string,
 ): Promise<TrechoConhecimento[]> {
   try {
     const [vetor] = await embedTexts(apiKey, [consulta.slice(0, 8000)]);
-    const { data, error } = await supabase.rpc("match_knowledge", { query_embedding: vetor, match_count: 12 });
+    const { data, error } = await supabase.rpc("match_knowledge", { query_embedding: vetor as unknown as string, match_count: 12 });
     if (error || !Array.isArray(data) || data.length === 0) return [];
     const candidatos = (data as { titulo: string; conteudo: string; similarity: number }[]).slice(0, 12);
 
