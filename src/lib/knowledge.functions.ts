@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const EMBEDDING_MODEL = "google/gemini-embedding-2";
@@ -51,16 +53,12 @@ function jevHeaders(apiKey: string): HeadersInit {
 // Busca inteligente: embeddings + Jev (System One) julgando a relevância de cada trecho.
 export async function retrieveTrechos(
   apiKey: string,
-  supabase: {
-    rpc: (
-      fn: "match_knowledge",
-      args: { query_embedding: string; match_count?: number },
-    ) => Promise<{ data: unknown; error: { message: string } | null }>,
-  },
+  supabase: SupabaseClient<Database>,
   consulta: string,
 ): Promise<TrechoConhecimento[]> {
   try {
     const [vetor] = await embedTexts(apiKey, [consulta.slice(0, 8000)]);
+    if (!vetor) return [];
     const { data, error } = await supabase.rpc("match_knowledge", { query_embedding: vetor as unknown as string, match_count: 12 });
     if (error || !Array.isArray(data) || data.length === 0) return [];
     const candidatos = (data as { titulo: string; conteudo: string; similarity: number }[]).slice(0, 12);
