@@ -111,6 +111,73 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_chunks: {
+        Row: {
+          conteudo: string
+          doc_id: number
+          embedding: string
+          id: number
+          ordem: number
+        }
+        Insert: {
+          conteudo: string
+          doc_id: number
+          embedding: string
+          id?: number
+          ordem?: number
+        }
+        Update: {
+          conteudo?: string
+          doc_id?: number
+          embedding?: string
+          id?: number
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_chunks_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_docs: {
+        Row: {
+          conteudo: string
+          created_at: string
+          disciplina_id: number | null
+          id: number
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          disciplina_id?: number | null
+          id?: number
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          disciplina_id?: number | null
+          id?: number
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_docs_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       niveis: {
         Row: {
           created_at: string
@@ -354,6 +421,21 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_knowledge: {
+        Args: {
+          filtro_disciplina?: number
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          conteudo: string
+          doc_id: number
+          id: number
+          ordem: number
+          similarity: number
+          titulo: string
+        }[]
       }
     }
     Enums: {

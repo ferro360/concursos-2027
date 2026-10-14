@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { retrieveTrechos } from "./knowledge.functions";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
@@ -27,7 +28,7 @@ export type QuestaoGerada = z.infer<typeof Schema>["questoes"][number];
 export const gerarQuestoes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { questoes: [], error: "IA não configurada." };
     const { createOpenAI } = await import("@ai-sdk/openai");
@@ -37,6 +38,14 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
       apiKey,
       headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     });
+    // Base de conhecimento da plataforma (busca inteligente + Jev), quando o usuário não colou conteúdo.
+    let base = "";
+    if (!data.conteudo) {
+      const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
+      if (trechos.length) {
+        base = `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; use como referência principal e mantenha fidelidade a ele):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`;
+      }
+    }
     const ce = data.tipo === "certo_errado";
     const instructions = `Você é um elaborador experiente de questões de concursos públicos brasileiros. Escreva em português do Brasil, com rigor técnico e sem erros factuais.
 ${ce
@@ -49,7 +58,7 @@ ${data.assuntos.length ? `Assunto(s): ${data.assuntos.join(", ")}` : "Assunto li
 ${data.banca ? `Estilo da banca: ${data.banca}` : ""}
 ${data.nivel ? `Escolaridade: ${data.nivel}` : ""}
 ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}
-${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : ""}`;
+${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : base}`;
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
@@ -88,7 +97,7 @@ const ComentarInput = z.object({
 export const comentarQuestao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ComentarInput.parse(d))
-  .handler(async ({ data }): Promise<{ comentario: string; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ comentario: string; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { comentario: "", error: "IA não configurada." };
     const { createOpenAI } = await import("@ai-sdk/openai");
@@ -101,6 +110,11 @@ export const comentarQuestao = createServerFn({ method: "POST" })
     const ce = data.tipo === "certo_errado";
     const L = "ABCDE";
     const gabarito = ce ? (data.correta === 0 ? "CERTO" : "ERRADO") : `${L[data.correta]}`;
+    // Base de conhecimento da plataforma (busca inteligente + Jev).
+    const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
+    const base = trechos.length
+      ? `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; quando ele for relevante, fundamente com base nele e cite o nome do material entre parênteses):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`
+      : "";
     const instructions = `Você é um professor especialista em concursos públicos brasileiros que escreve comentários de questões (estilo professor do QConcursos). Escreva em português do Brasil, texto corrido simples (sem markdown, sem asteriscos, sem títulos com #).
 O gabarito informado é OFICIAL: fundamente-o, nunca o contradiga.
 Estrutura:
@@ -114,7 +128,7 @@ Seja preciso e objetivo; não invente leis ou números de artigos se não tiver 
 Enunciado:
 ${data.enunciado}
 ${ce ? "" : "\nAlternativas:\n" + data.alternativas.map((a, i) => `${L[i]}) ${a}`).join("\n")}
-\nGabarito oficial: ${gabarito}`;
+\nGabarito oficial: ${gabarito}${base}`;
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),

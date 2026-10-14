@@ -50,6 +50,13 @@
       "when": 1791917308285,
       "tag": "0006_niveis_escolaridade",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791936668309,
+      "tag": "0007_biblioteca_conhecimento",
+      "breakpoints": true
     }
   ]
 }
