@@ -121,7 +121,7 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
     if (error || !doc) return { ok: false, error: "Erro ao salvar o material." };
     try {
       const vetores = await embedTexts(apiKey, trechos);
-      const linhas = trechos.map((t, i) => ({ doc_id: (doc as { id: number }).id, ordem: i, conteudo: t, embedding: vetores[i] }));
+      const linhas = trechos.map((t, i) => ({ doc_id: (doc as { id: number }).id, ordem: i, conteudo: t, embedding: (vetores[i] ?? []) as unknown as string }));
       const { error: chunkError } = await context.supabase.from("knowledge_chunks").insert(linhas);
       if (chunkError) throw new Error(chunkError.message);
       return { ok: true, trechos: linhas.length };
