@@ -4,9 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { ehAdmin } from "./ai-guard";
+import { obterIA, IA_NAO_CONFIGURADA, type Embeddings, type IA } from "./ai-provider";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
-const EMBEDDING_MODEL = "google/gemini-embedding-2";
 const JEV_MODEL = "typesafe/jev-latest";
 
 export type TrechoConhecimento = { titulo: string; conteudo: string };
@@ -27,14 +26,14 @@ function dividirEmTrechos(texto: string, alvo = 1200, overlap = 150): string[] {
   return trechos.filter((t) => t.length > 20).slice(0, 400);
 }
 
-async function embedTexts(apiKey: string, texts: string[]): Promise<number[][]> {
+async function embedTexts(emb: Embeddings, texts: string[]): Promise<number[][]> {
   const vetores: number[][] = [];
   for (let i = 0; i < texts.length; i += 100) {
     const lote = texts.slice(i, i + 100);
-    const res = await fetch(`${GATEWAY}/embeddings`, {
+    const res = await fetch(emb.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: EMBEDDING_MODEL, input: lote }),
+      headers: emb.headers,
+      body: JSON.stringify({ model: emb.modelo, input: lote }),
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => "");
@@ -47,18 +46,16 @@ async function embedTexts(apiKey: string, texts: string[]): Promise<number[][]> 
   return vetores;
 }
 
-function jevHeaders(apiKey: string): HeadersInit {
-  return { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" };
-}
-
 // Busca inteligente: embeddings + Jev (System One) julgando a relevância de cada trecho.
+// Sem modelo de embeddings (OpenRouter sem OPENROUTER_EMBEDDING_MODEL), segue sem a biblioteca.
 export async function retrieveTrechos(
-  apiKey: string,
+  ia: IA,
   supabase: SupabaseClient<Database>,
   consulta: string,
 ): Promise<TrechoConhecimento[]> {
+  if (!ia.embeddings) return [];
   try {
-    const [vetor] = await embedTexts(apiKey, [consulta.slice(0, 8000)]);
+    const [vetor] = await embedTexts(ia.embeddings, [consulta.slice(0, 8000)]);
     if (!vetor) return [];
     const { data, error } = await supabase.rpc("match_knowledge", { query_embedding: vetor as unknown as string, match_count: 12 });
     if (error || !Array.isArray(data) || data.length === 0) return [];
@@ -77,10 +74,10 @@ export async function retrieveTrechos(
       };
     }
     let relevantes = candidatos;
-    try {
-      const res = await fetch(`${GATEWAY}/systemone`, {
+    if (ia.jev) try {
+      const res = await fetch(ia.jev.url, {
         method: "POST",
-        headers: jevHeaders(apiKey),
+        headers: ia.jev.headers,
         body: JSON.stringify({ model: JEV_MODEL, state: { consulta, trechos }, questions }),
       });
       if (res.ok) {
@@ -111,8 +108,9 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DocInput.parse(d))
   .handler(async ({ data, context }): Promise<{ ok: boolean; trechos?: number; error?: string }> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) return { ok: false, error: "IA não configurada." };
+    const ia = await obterIA();
+    if (!ia) return { ok: false, error: IA_NAO_CONFIGURADA };
+    if (!ia.embeddings) return { ok: false, error: "Indexação indisponível: configure OPENROUTER_EMBEDDING_MODEL." };
     if (!(await ehAdmin(context))) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
     const trechos = dividirEmTrechos(data.conteudo);
     if (trechos.length === 0) return { ok: false, error: "Conteúdo muito curto para indexar." };
@@ -123,7 +121,7 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
       .single();
     if (error || !doc) return { ok: false, error: "Erro ao salvar o material." };
     try {
-      const vetores = await embedTexts(apiKey, trechos);
+      const vetores = await embedTexts(ia.embeddings, trechos);
       const linhas = trechos.map((t, i) => ({ doc_id: (doc as { id: number }).id, ordem: i, conteudo: t, embedding: (vetores[i] ?? []) as unknown as string }));
       const { error: chunkError } = await context.supabase.from("knowledge_chunks").insert(linhas);
       if (chunkError) throw new Error(chunkError.message);
@@ -132,7 +130,7 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
       console.error("addKnowledgeDoc", e);
       await context.supabase.from("knowledge_docs").delete().eq("id", (doc as { id: number }).id);
       const status = (e as { message?: string }).message?.includes("402") ? 402 : undefined;
-      if (status === 402) return { ok: false, error: "Créditos de IA esgotados. Adicione créditos no workspace." };
+      if (status === 402) return { ok: false, error: "Créditos de IA esgotados. Adicione créditos no provedor de IA." };
       return { ok: false, error: "Material salvo, mas houve erro ao indexar o conteúdo. Tente novamente." };
     }
   });

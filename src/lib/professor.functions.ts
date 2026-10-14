@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
 import { consumirCotaIA, COTA_ESGOTADA } from "./ai-guard";
+import { erroIA, IA_NAO_CONFIGURADA, obterIA } from "./ai-provider";
 
 const PERGUNTAS_POR_DIA = 30;
 
@@ -31,19 +32,13 @@ export const perguntarProfessor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<{ resposta: string; fontes: Fonte[]; error?: string }> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) return { resposta: "", fontes: [], error: "IA não configurada." };
+    const ia = await obterIA();
+    if (!ia) return { resposta: "", fontes: [], error: IA_NAO_CONFIGURADA };
     if (!(await consumirCotaIA(context, PERGUNTAS_POR_DIA))) return { resposta: "", fontes: [], error: COTA_ESGOTADA };
-    const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText } = await import("ai");
-    const provider = createOpenAI({
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      apiKey,
-      headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    });
 
     // Base de conhecimento da plataforma (busca inteligente + Jev).
-    const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.pergunta}`.slice(0, 8000));
+    const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.pergunta}`.slice(0, 8000));
     const fontes: Fonte[] = [];
     for (const t of trechos) {
       if (!fontes.some((f) => f.titulo === t.titulo)) fontes.push({ titulo: t.titulo, trecho: t.conteudo.slice(0, 220) });
@@ -67,11 +62,11 @@ Termine com uma frase curta começando com "Dica:" voltada para a prova.`;
 
     try {
       const result = streamText({
-        model: provider.responses("openai/gpt-6-astra"),
+        model: ia.modelo,
         instructions,
         messages: mensagens,
         maxRetries: 0,
-        providerOptions: { openai: { store: false, forceReasoning: true, reasoningEffort: "medium", include: ["reasoning.encrypted_content"] } },
+        providerOptions: ia.providerOptions,
       });
       const resposta = (await result.text).trim();
       if (!resposta) return { resposta: "", fontes: [], error: "A IA não retornou uma resposta." };
@@ -79,9 +74,6 @@ Termine com uma frase curta começando com "Dica:" voltada para a prova.`;
       return { resposta, fontes: fontes.filter((f) => citado(resposta, f.titulo)) };
     } catch (e) {
       console.error("perguntarProfessor", e);
-      const status = (e as { statusCode?: number }).statusCode;
-      if (status === 402) return { resposta: "", fontes: [], error: "Créditos de IA esgotados. Adicione créditos no workspace." };
-      if (status === 429) return { resposta: "", fontes: [], error: "Muitas solicitações. Tente novamente em instantes." };
-      return { resposta: "", fontes: [], error: "Não foi possível responder agora." };
+      return { resposta: "", fontes: [], error: erroIA(e, "Não foi possível responder agora.") };
     }
   });

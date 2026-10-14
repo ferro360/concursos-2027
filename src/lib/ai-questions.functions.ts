@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
 import { ehAdmin, SO_ADMIN } from "./ai-guard";
+import { erroIA, IA_NAO_CONFIGURADA, obterIA } from "./ai-provider";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
@@ -30,20 +31,14 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) return { questoes: [], error: "IA não configurada." };
+    const ia = await obterIA();
+    if (!ia) return { questoes: [], error: IA_NAO_CONFIGURADA };
     if (!(await ehAdmin(context))) return { questoes: [], error: SO_ADMIN };
-    const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText, Output } = await import("ai");
-    const provider = createOpenAI({
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      apiKey,
-      headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    });
     // Base de conhecimento da plataforma (busca inteligente + Jev), quando o usuário não colou conteúdo.
     let base = "";
     if (!data.conteudo) {
-      const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
+      const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
       if (trechos.length) {
         base = `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; use como referência principal e mantenha fidelidade a ele):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`;
       }
@@ -63,12 +58,12 @@ ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}
 ${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : base}`;
     try {
       const result = streamText({
-        model: provider.responses("openai/gpt-6-astra"),
+        model: ia.modelo,
         instructions,
         prompt,
         maxRetries: 0,
         output: Output.object({ schema: Schema }),
-        providerOptions: { openai: { store: false, forceReasoning: true, reasoningEffort: "medium", include: ["reasoning.encrypted_content"] } },
+        providerOptions: ia.providerOptions,
       });
       const out = await result.output;
       const questoes = out.questoes.filter((q) => {
@@ -79,10 +74,7 @@ ${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (nã
       return { questoes };
     } catch (e) {
       console.error("gerarQuestoes", e);
-      const status = (e as { statusCode?: number }).statusCode;
-      if (status === 402) return { questoes: [], error: "Créditos de IA esgotados. Adicione créditos no workspace." };
-      if (status === 429) return { questoes: [], error: "Muitas solicitações. Tente novamente em instantes." };
-      return { questoes: [], error: "Não foi possível gerar as questões agora." };
+      return { questoes: [], error: erroIA(e, "Não foi possível gerar as questões agora.") };
     }
   });
 
@@ -100,21 +92,15 @@ export const comentarQuestao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ComentarInput.parse(d))
   .handler(async ({ data, context }): Promise<{ comentario: string; error?: string }> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) return { comentario: "", error: "IA não configurada." };
+    const ia = await obterIA();
+    if (!ia) return { comentario: "", error: IA_NAO_CONFIGURADA };
     if (!(await ehAdmin(context))) return { comentario: "", error: SO_ADMIN };
-    const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText } = await import("ai");
-    const provider = createOpenAI({
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      apiKey,
-      headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    });
     const ce = data.tipo === "certo_errado";
     const L = "ABCDE";
     const gabarito = ce ? (data.correta === 0 ? "CERTO" : "ERRADO") : `${L[data.correta]}`;
     // Base de conhecimento da plataforma (busca inteligente + Jev).
-    const trechos = await retrieveTrechos(apiKey, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
+    const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
     const base = trechos.length
       ? `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; quando ele for relevante, fundamente com base nele e cite o nome do material entre parênteses):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`
       : "";
@@ -134,20 +120,17 @@ ${ce ? "" : "\nAlternativas:\n" + data.alternativas.map((a, i) => `${L[i]}) ${a}
 \nGabarito oficial: ${gabarito}${base}`;
     try {
       const result = streamText({
-        model: provider.responses("openai/gpt-6-astra"),
+        model: ia.modelo,
         instructions,
         prompt,
         maxRetries: 0,
-        providerOptions: { openai: { store: false, forceReasoning: true, reasoningEffort: "medium", include: ["reasoning.encrypted_content"] } },
+        providerOptions: ia.providerOptions,
       });
       const comentario = (await result.text).trim();
       if (!comentario) return { comentario: "", error: "A IA não retornou um comentário." };
       return { comentario };
     } catch (e) {
       console.error("comentarQuestao", e);
-      const status = (e as { statusCode?: number }).statusCode;
-      if (status === 402) return { comentario: "", error: "Créditos de IA esgotados. Adicione créditos no workspace." };
-      if (status === 429) return { comentario: "", error: "Muitas solicitações. Tente novamente em instantes." };
-      return { comentario: "", error: "Não foi possível gerar o comentário agora." };
+      return { comentario: "", error: erroIA(e, "Não foi possível gerar o comentário agora.") };
     }
   });
