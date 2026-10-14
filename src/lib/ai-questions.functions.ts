@@ -28,7 +28,7 @@ export type QuestaoGerada = z.infer<typeof Schema>["questoes"][number];
 export const gerarQuestoes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
+  .handler(async ({ data, context }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { questoes: [], error: "IA não configurada." };
     const { createOpenAI } = await import("@ai-sdk/openai");
@@ -58,7 +58,7 @@ ${data.assuntos.length ? `Assunto(s): ${data.assuntos.join(", ")}` : "Assunto li
 ${data.banca ? `Estilo da banca: ${data.banca}` : ""}
 ${data.nivel ? `Escolaridade: ${data.nivel}` : ""}
 ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}
-${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : ""}`;
+${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : base}`;
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
