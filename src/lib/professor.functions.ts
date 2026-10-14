@@ -14,6 +14,16 @@ const Input = z.object({
 
 export type Fonte = { titulo: string; trecho: string };
 
+function normalizar(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// O material só é exibido como fonte se o nome dele aparecer na resposta.
+function citado(resposta: string, titulo: string): boolean {
+  const t = normalizar(titulo);
+  return !!t && normalizar(resposta).includes(t);
+}
+
 export const perguntarProfessor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
@@ -60,8 +70,9 @@ Termine com uma frase curta começando com "Dica:" voltada para a prova.`;
         providerOptions: { openai: { store: false, forceReasoning: true, reasoningEffort: "medium", include: ["reasoning.encrypted_content"] } },
       });
       const resposta = (await result.text).trim();
-      if (!resposta) return { resposta: "", fontes, error: "A IA não retornou uma resposta." };
-      return { resposta, fontes };
+      if (!resposta) return { resposta: "", fontes: [], error: "A IA não retornou uma resposta." };
+      // Só aparece como fonte o material que a resposta realmente citou.
+      return { resposta, fontes: fontes.filter((f) => citado(resposta, f.titulo)) };
     } catch (e) {
       console.error("perguntarProfessor", e);
       const status = (e as { statusCode?: number }).statusCode;
