@@ -42,6 +42,7 @@ export const perguntarProfessor = createServerFn({ method: "POST" })
 Responda apenas a dúvida feita, de forma clara, direta e didática, em no máximo 350 palavras.
 Explique o conceito, dê um exemplo prático quando ajudar e, se for o caso, cite a base legal (artigo de lei, súmula, regra) apenas quando tiver certeza do número.
 ${base}
+Só cite um material da base se ele realmente sustentar o que você escreveu, copiando o nome dele exatamente como aparece, entre parênteses. Se nenhum material for útil, não cite nenhum e diga que a base não cobre o assunto.
 Se a base de conhecimento não cobre o assunto, responda com seu conhecimento geral e diga isso de forma breve. Se não souber, admita com honestidade — nunca invente lei, número de artigo, prazo ou súmula.
 Termine com uma frase curta começando com "Dica:" voltada para a prova.`;
 
