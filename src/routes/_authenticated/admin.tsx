@@ -7,6 +7,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { SiteHeader } from "@/components/site-header";
 import { QuestionForm } from "@/components/question-form";
 import { AdminCadastros } from "@/components/admin-cadastros";
+import { AdminBiblioteca } from "@/components/admin-biblioteca";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useSession } from "@/hooks/use-session";
 
