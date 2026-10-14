@@ -16,6 +16,7 @@ import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedGerarQuestoesRouteImport } from './routes/_authenticated/gerar-questoes'
 import { Route as AuthenticatedNovaQuestaoRouteImport } from './routes/_authenticated/nova-questao'
+import { Route as AuthenticatedProfessorRouteImport } from './routes/_authenticated/professor'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +54,11 @@ const AuthenticatedNovaQuestaoRoute =
     path: '/nova-questao',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProfessorRoute = AuthenticatedProfessorRouteImport.update({
+  id: '/professor',
+  path: '/professor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/gerar-questoes': typeof AuthenticatedGerarQuestoesRoute
   '/nova-questao': typeof AuthenticatedNovaQuestaoRoute
+  '/professor': typeof AuthenticatedProfessorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/gerar-questoes': typeof AuthenticatedGerarQuestoesRoute
   '/nova-questao': typeof AuthenticatedNovaQuestaoRoute
+  '/professor': typeof AuthenticatedProfessorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,14 +87,27 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/gerar-questoes': typeof AuthenticatedGerarQuestoesRoute
   '/_authenticated/nova-questao': typeof AuthenticatedNovaQuestaoRoute
+  '/_authenticated/professor': typeof AuthenticatedProfessorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/ranking' | '/admin' | '/gerar-questoes' | '/nova-questao'
+    | '/'
+    | '/auth'
+    | '/ranking'
+    | '/admin'
+    | '/gerar-questoes'
+    | '/nova-questao'
+    | '/professor'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/auth' | '/ranking' | '/admin' | '/gerar-questoes' | '/nova-questao'
+    | '/'
+    | '/auth'
+    | '/ranking'
+    | '/admin'
+    | '/gerar-questoes'
+    | '/nova-questao'
+    | '/professor'
   id:
     | '__root__'
     | '/'
@@ -96,6 +117,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/gerar-questoes'
     | '/_authenticated/nova-questao'
+    | '/_authenticated/professor'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNovaQuestaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/professor': {
+      id: '/_authenticated/professor'
+      path: '/professor'
+      fullPath: '/professor'
+      preLoaderRoute: typeof AuthenticatedProfessorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -163,12 +192,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedGerarQuestoesRoute: typeof AuthenticatedGerarQuestoesRoute
   AuthenticatedNovaQuestaoRoute: typeof AuthenticatedNovaQuestaoRoute
+  AuthenticatedProfessorRoute: typeof AuthenticatedProfessorRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedGerarQuestoesRoute: AuthenticatedGerarQuestoesRoute,
   AuthenticatedNovaQuestaoRoute: AuthenticatedNovaQuestaoRoute,
+  AuthenticatedProfessorRoute: AuthenticatedProfessorRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
