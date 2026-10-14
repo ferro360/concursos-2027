@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_uso: {
+        Row: {
+          dia: string
+          user_id: string
+          usos: number
+        }
+        Insert: {
+          dia?: string
+          user_id: string
+          usos?: number
+        }
+        Update: {
+          dia?: string
+          user_id?: string
+          usos?: number
+        }
+        Relationships: []
+      }
       answers: {
         Row: {
           acertou: boolean
@@ -270,6 +288,7 @@ export type Database = {
           assunto_id: number | null
           banca: string
           banca_id: number | null
+          busca: unknown
           comentario: string
           correta: number
           created_at: string
@@ -293,6 +312,7 @@ export type Database = {
           assunto_id?: number | null
           banca: string
           banca_id?: number | null
+          busca?: never
           comentario?: string
           correta: number
           created_at?: string
@@ -316,6 +336,7 @@ export type Database = {
           assunto_id?: number | null
           banca?: string
           banca_id?: number | null
+          busca?: never
           comentario?: string
           correta?: number
           created_at?: string
@@ -388,11 +409,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stats: {
+        Row: {
+          acertos: number
+          resolvidas: number
+          user_id: string
+        }
+        Insert: {
+          acertos?: number
+          resolvidas?: number
+          user_id: string
+        }
+        Update: {
+          acertos?: number
+          resolvidas?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_get_question: {
+        Args: { p_id: number }
+        Returns: Database["public"]["Tables"]["questions"]["Row"][]
+      }
       admin_list_users: {
         Args: never
         Returns: {
@@ -405,6 +448,61 @@ export type Database = {
           resolvidas: number
           username: string
         }[]
+      }
+      anos_questoes: {
+        Args: never
+        Returns: number[]
+      }
+      buscar_questoes: {
+        Args: {
+          p_ano?: number
+          p_assunto_id?: number
+          p_banca_id?: number
+          p_busca?: string
+          p_disciplina_id?: number
+          p_nivel_id?: number
+          p_orgao_id?: number
+          p_situacao?: string
+          p_tipo?: string
+          p_antes_de?: number
+          p_limite?: number
+        }
+        Returns: {
+          acertou: boolean | null
+          alternativas: string[]
+          ano: number
+          assuntos: string[]
+          banca: string
+          comentario: string | null
+          correta: number | null
+          disciplina: string
+          enunciado: string
+          id: number
+          imagem_url: string
+          nivel: string
+          orgao: string
+          respondida: number | null
+          tipo: string
+          video_url: string
+        }[]
+      }
+      consumir_cota_ia: {
+        Args: { p_limite: number }
+        Returns: boolean
+      }
+      contar_questoes: {
+        Args: {
+          p_ano?: number
+          p_assunto_id?: number
+          p_banca_id?: number
+          p_busca?: string
+          p_disciplina_id?: number
+          p_nivel_id?: number
+          p_orgao_id?: number
+          p_situacao?: string
+          p_tipo?: string
+        }
+        Returns: number
       }
       get_ranking: {
         Args: never
@@ -436,6 +534,19 @@ export type Database = {
           similarity: number
           titulo: string
         }[]
+      }
+      responder_questao: {
+        Args: { p_alternativa: number; p_question_id: number }
+        Returns: {
+          acertou: boolean
+          alternativa: number
+          comentario: string
+          correta: number
+        }[]
+      }
+      sem_acento: {
+        Args: { "": string }
+        Returns: string
       }
     }
     Enums: {

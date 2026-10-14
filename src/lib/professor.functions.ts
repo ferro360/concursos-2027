@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
+import { consumirCotaIA, COTA_ESGOTADA } from "./ai-guard";
+
+const PERGUNTAS_POR_DIA = 30;
 
 const Input = z.object({
   pergunta: z.string().min(1).max(4000),
@@ -30,6 +33,7 @@ export const perguntarProfessor = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ resposta: string; fontes: Fonte[]; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { resposta: "", fontes: [], error: "IA não configurada." };
+    if (!(await consumirCotaIA(context, PERGUNTAS_POR_DIA))) return { resposta: "", fontes: [], error: COTA_ESGOTADA };
     const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText } = await import("ai");
     const provider = createOpenAI({

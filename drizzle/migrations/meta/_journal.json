@@ -57,6 +57,13 @@
       "when": 1791936668309,
       "tag": "0007_biblioteca_conhecimento",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791950000000,
+      "tag": "0008_seguranca_desempenho",
+      "breakpoints": true
     }
   ]
 }

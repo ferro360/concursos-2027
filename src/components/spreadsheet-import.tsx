@@ -89,7 +89,7 @@ export function SpreadsheetImport() {
       }
     }
     setLog(msgs); setBusy(false);
-    ["questions", "question-assuntos", "cadastros"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+    ["questoes", "cadastros"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     if (ok) toast.success(`${ok} questão(ões) importada(s).`);
     if (msgs.length) toast.error(`${msgs.length} linha(s) com erro.`);
   };

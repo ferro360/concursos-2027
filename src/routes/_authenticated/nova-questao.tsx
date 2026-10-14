@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/site-header";
 import { QuestionForm } from "@/components/question-form";
 import { SpreadsheetImport } from "@/components/spreadsheet-import";
+import { AdminOnly } from "@/components/admin-only";
 
 export const Route = createFileRoute("/_authenticated/nova-questao")({
   head: () => ({
@@ -28,6 +29,7 @@ function NovaQuestao() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-6 font-display text-3xl font-bold">Nova questão</h1>
+        <AdminOnly>
         <SpreadsheetImport />
         <QuestionForm submitLabel="Cadastrar questão" onSubmit={async (q) => {
           const { data: u } = await supabase.auth.getUser();
@@ -38,10 +40,10 @@ function NovaQuestao() {
             .insert(assunto_ids.map((assunto_id) => ({ question_id: created.id, assunto_id })));
           if (linkError) { toast.error("Questão salva, mas houve erro ao vincular os assuntos."); return; }
           toast.success("Questão cadastrada!");
-          qc.invalidateQueries({ queryKey: ["questions"] });
-          qc.invalidateQueries({ queryKey: ["question-assuntos"] });
+          qc.invalidateQueries({ queryKey: ["questoes"] });
           navigate({ to: "/" });
         }} />
+        </AdminOnly>
       </main>
     </div>
   );

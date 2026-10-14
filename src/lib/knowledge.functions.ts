@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { ehAdmin } from "./ai-guard";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const EMBEDDING_MODEL = "google/gemini-embedding-2";
@@ -112,8 +113,7 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ ok: boolean; trechos?: number; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { ok: false, error: "IA não configurada." };
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    if (!isAdmin) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
+    if (!(await ehAdmin(context))) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
     const trechos = dividirEmTrechos(data.conteudo);
     if (trechos.length === 0) return { ok: false, error: "Conteúdo muito curto para indexar." };
     const { data: doc, error } = await context.supabase
@@ -141,8 +141,7 @@ export const deleteKnowledgeDoc = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.number().int() }).parse(d))
   .handler(async ({ data, context }): Promise<{ ok: boolean; error?: string }> => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    if (!isAdmin) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
+    if (!(await ehAdmin(context))) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
     const { error } = await context.supabase.from("knowledge_docs").delete().eq("id", data.id);
     if (error) return { ok: false, error: "Erro ao excluir o material." };
     return { ok: true };

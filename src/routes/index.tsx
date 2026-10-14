@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 import { SiteHeader } from "@/components/site-header";
 import { useSession } from "@/hooks/use-session";
-
-type Question = Tables<"questions">;
+import { useCadastros } from "@/hooks/use-cadastros";
+import { useAnosQuestoes, useQuestoes, type FiltrosQuestoes, type QuestaoListada } from "@/hooks/use-questoes";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,89 +23,53 @@ export const Route = createFileRoute("/")({
 });
 
 const FILTERS = [
-  ["disciplina", "Disciplina"],
-  ["banca", "Banca"],
-  ["orgao", "Órgão"],
-  ["nivel", "Nível"],
-  ["ano", "Ano"],
+  ["disciplina_id", "Disciplina", "disciplinas"],
+  ["banca_id", "Banca", "bancas"],
+  ["orgao_id", "Órgão", "orgaos"],
+  ["nivel_id", "Nível", "niveis"],
 ] as const;
 
-type Filtros = { campos: Record<string, string>; assunto: string; tipo: string; status: string; busca: string };
-const VAZIO: Filtros = { campos: {}, assunto: "", tipo: "", status: "nao", busca: "" };
+type Filtros = FiltrosQuestoes & { situacao: string };
+const VAZIO: Filtros = { situacao: "nao", busca: "" };
+const num = (v: string) => (v ? Number(v) : null);
+const select = "rounded-xl border bg-card px-3 py-2.5 text-sm outline-none transition hover:border-primary/50 focus:ring-2 focus:ring-ring";
 
 function Index() {
   const { user } = useSession();
   const qc = useQueryClient();
+  const { data: cad } = useCadastros();
+  const anos = useAnosQuestoes();
   const [draft, setDraft] = useState<Filtros>(VAZIO);
   const [aplicado, setAplicado] = useState<Filtros>(VAZIO);
-  const { campos: f, busca } = aplicado;
+  const filtros = useMemo(() => ({ ...aplicado, situacao: user ? aplicado.situacao : "" }), [aplicado, user]);
+  const { questoes, total, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useQuestoes(filtros, user?.id);
 
-  const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["questions"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("questions").select("*").order("id");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: answers = {} } = useQuery({
-    queryKey: ["answers", user?.id],
+  const { data: stats } = useQuery({
+    queryKey: ["user-stats", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("answers").select("question_id, alternativa, acertou");
+      const { data, error } = await supabase.from("user_stats").select("resolvidas, acertos").maybeSingle();
       if (error) throw error;
-      return Object.fromEntries(data.map((a) => [a.question_id, a]));
+      return data ?? { resolvidas: 0, acertos: 0 };
     },
   });
+  const done = Number(stats?.resolvidas ?? 0);
+  const hits = Number(stats?.acertos ?? 0);
+  const assuntoOptions = cad.assuntos.filter((a) => !draft.disciplina_id || a.disciplina_id === draft.disciplina_id);
 
-  // mapa questão -> nomes de todos os assuntos vinculados
-  const { data: assuntosPorQuestao = {} } = useQuery({
-    queryKey: ["question-assuntos"],
-    queryFn: async () => {
-      const [{ data: links, error: e1 }, { data: assuntos, error: e2 }] = await Promise.all([
-        supabase.from("question_assuntos").select("question_id, assunto_id"),
-        supabase.from("assuntos").select("id, nome"),
-      ]);
-      if (e1) throw e1;
-      if (e2) throw e2;
-      const nomes = Object.fromEntries(assuntos.map((a) => [a.id, a.nome]));
-      const map: Record<number, string[]> = {};
-      for (const l of links) (map[l.question_id] ??= []).push(nomes[l.assunto_id] ?? "");
-      return map;
-    },
-  });
-
-  const assuntosDe = (q: Question) => assuntosPorQuestao[q.id]?.filter(Boolean) ?? [q.assunto];
-
-  const list = useMemo(() => questions.filter((q) => {
-    const a = answers[q.id];
-    const st = aplicado.status;
-    return FILTERS.every(([k]) => !f[k] || String(q[k]) === f[k]) &&
-      (!aplicado.assunto || assuntosDe(q).includes(aplicado.assunto)) &&
-      (!aplicado.tipo || q.tipo === aplicado.tipo) &&
-      (!st || (st === "nao" ? !a : st === "resolvidas" ? !!a : st === "acertei" ? !!a?.acertou : !!a && !a.acertou)) &&
-      (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()));
-  }), [questions, f, busca, aplicado, answers, assuntosPorQuestao]);
-
-  const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
-  const dDisc = draft.campos["disciplina"];
-  const assuntoOptions = Array.from(new Set(questions.filter((q) => !dDisc || q.disciplina === dDisc).flatMap(assuntosDe))).filter(Boolean).sort();
-  const vals = Object.values(answers);
-  const done = vals.length;
-  const hits = vals.filter((a) => a.acertou).length;
-
-  const responder = async (q: Question, alt: number) => {
+  const responder = async (q: QuestaoListada, alt: number) => {
     if (!user) return;
-    const { error } = await supabase.from("answers").insert({ user_id: user.id, question_id: q.id, alternativa: alt });
-    if (error) { toast.error("Não foi possível salvar sua resposta."); return; }
-    qc.invalidateQueries({ queryKey: ["answers", user.id] });
-  };
-
-  const zerar = async () => {
-    if (!user || !confirm("Apagar todas as suas respostas?")) return;
-    await supabase.from("answers").delete().eq("user_id", user.id);
-    qc.invalidateQueries({ queryKey: ["answers", user.id] });
+    const { data, error } = await supabase.rpc("responder_questao", { p_question_id: q.id, p_alternativa: alt });
+    const r = data?.[0];
+    if (error || !r) { toast.error("Não foi possível salvar sua resposta."); return; }
+    // atualiza só o cartão respondido; recarregar a lista tiraria a questão da tela no filtro "não resolvidas"
+    qc.setQueriesData<InfiniteData<QuestaoListada[]>>({ queryKey: ["questoes", "lista"] }, (old) => old && {
+      ...old,
+      pages: old.pages.map((pg) => pg.map((x) => (x.id === q.id
+        ? { ...x, respondida: r.alternativa, acertou: r.acertou, correta: r.correta, comentario: r.comentario } : x))),
+    });
+    qc.invalidateQueries({ queryKey: ["user-stats", user.id] });
+    qc.invalidateQueries({ queryKey: ["questoes", "total"] });
   };
 
   return (
@@ -136,38 +99,37 @@ function Index() {
               Entrar e começar a resolver
             </Link>
           )}
-          {user && done > 0 && <button className="mt-3 text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={zerar}>Zerar minhas respostas</button>}
         </div>
       </section>
       <main className="mx-auto max-w-6xl px-4 py-8">
         <form className="mb-8 rounded-2xl border bg-card p-5 shadow-soft"
           onSubmit={(e) => { e.preventDefault(); setAplicado(draft); }}>
           <h2 className="mb-4 text-lg font-semibold">Filtrar questões</h2>
-          <input value={draft.busca} onChange={(e) => setDraft({ ...draft, busca: e.target.value })} placeholder="Palavra-chave no enunciado ou assunto..."
+          <input value={draft.busca} onChange={(e) => setDraft({ ...draft, busca: e.target.value })} placeholder="Palavra-chave no enunciado, ou o número da questão (ex.: Q123)..."
             className="mb-3 w-full rounded-full border bg-muted px-5 py-3 outline-none transition focus:bg-card focus:ring-2 focus:ring-ring" />
           <div className="grid gap-3 sm:grid-cols-4">
-            {FILTERS.map(([k, label]) => (
-              <select key={k} value={draft.campos[k] ?? ""}
-                onChange={(e) => setDraft({ ...draft, campos: { ...draft.campos, [k]: e.target.value }, ...(k === "disciplina" ? { assunto: "" } : {}) })}
-                className="rounded-xl border bg-card px-3 py-2.5 text-sm outline-none transition hover:border-primary/50 focus:ring-2 focus:ring-ring">
+            {FILTERS.map(([k, label, tabela]) => (
+              <select key={k} value={draft[k] ?? ""} className={select}
+                onChange={(e) => setDraft({ ...draft, [k]: num(e.target.value), ...(k === "disciplina_id" ? { assunto_id: null } : {}) })}>
                 <option value="">{label}: todas</option>
-                {options(k).map((v) => <option key={v}>{v}</option>)}
+                {cad[tabela].map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
               </select>
             ))}
-            <select value={draft.assunto} onChange={(e) => setDraft({ ...draft, assunto: e.target.value })}
-              className="rounded-xl border bg-card px-3 py-2.5 text-sm outline-none transition hover:border-primary/50 focus:ring-2 focus:ring-ring">
+            <select value={draft.assunto_id ?? ""} onChange={(e) => setDraft({ ...draft, assunto_id: num(e.target.value) })} className={select}>
               <option value="">Assunto: todos</option>
-              {assuntoOptions.map((v) => <option key={v}>{v}</option>)}
+              {assuntoOptions.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
             </select>
-            <select value={draft.tipo} onChange={(e) => setDraft({ ...draft, tipo: e.target.value })}
-              className="rounded-xl border bg-card px-3 py-2.5 text-sm outline-none transition hover:border-primary/50 focus:ring-2 focus:ring-ring">
+            <select value={draft.ano ?? ""} onChange={(e) => setDraft({ ...draft, ano: num(e.target.value) })} className={select}>
+              <option value="">Ano: todos</option>
+              {anos.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <select value={draft.tipo ?? ""} onChange={(e) => setDraft({ ...draft, tipo: e.target.value })} className={select}>
               <option value="">Tipo: todos</option>
               <option value="multipla_escolha">Múltipla escolha</option>
               <option value="certo_errado">Certo/Errado</option>
             </select>
             {user && (
-              <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}
-                className="rounded-xl border bg-card px-3 py-2.5 text-sm outline-none transition hover:border-primary/50 focus:ring-2 focus:ring-ring">
+              <select value={draft.situacao} onChange={(e) => setDraft({ ...draft, situacao: e.target.value })} className={select}>
                 <option value="">Situação: todas</option>
                 <option value="nao">Não resolvidas</option>
                 <option value="resolvidas">Resolvidas</option>
@@ -180,15 +142,23 @@ function Index() {
             <button type="submit" className="rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift">Aplicar filtros</button>
             <button type="button" className="text-sm text-muted-foreground underline"
               onClick={() => { setDraft(VAZIO); setAplicado(VAZIO); }}>Limpar</button>
-            <p className="text-sm text-muted-foreground">{isLoading ? "Carregando..." : `${list.length} questões encontradas`}</p>
+            <p className="text-sm text-muted-foreground">{total == null ? "Contando..." : `${Number(total).toLocaleString("pt-BR")} questões encontradas`}</p>
           </div>
         </form>
 
         <div className="space-y-5">
-          {list.map((q) => (
-            <QuestionCard key={q.id} q={q} assuntos={assuntosDe(q)} canAnswer={!!user} answered={answers[q.id]?.alternativa}
-              onAnswer={(a) => responder(q, a)} />
+          {questoes.map((q) => (
+            <QuestionCard key={q.id} q={q} canAnswer={!!user} onAnswer={(a) => responder(q, a)} />
           ))}
+          {isLoading && <p className="text-center text-sm text-muted-foreground">Carregando...</p>}
+          {hasNextPage && (
+            <div className="text-center">
+              <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}
+                className="rounded-full border px-6 py-2.5 font-semibold transition hover:bg-muted disabled:opacity-50">
+                {isFetchingNextPage ? "Carregando..." : "Carregar mais questões"}
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>
@@ -200,10 +170,12 @@ function youtubeId(url: string): string | null {
   return m?.[1] ?? null;
 }
 
-function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Question; assuntos: string[]; canAnswer: boolean; answered?: number | undefined; onAnswer: (a: number) => void }) {
+function QuestionCard({ q, canAnswer, onAnswer }: { q: QuestaoListada; canAnswer: boolean; onAnswer: (a: number) => Promise<void> }) {
   const [sel, setSel] = useState<number | null>(null);
+  const [enviando, setEnviando] = useState(false);
   const [showCom, setShowCom] = useState(false);
-  const isAnswered = answered !== undefined;
+  const answered = q.respondida;
+  const isAnswered = answered !== null;
   const letters = "ABCDE";
   const CE = ["Certo", "Errado"];
   const ce = q.tipo === "certo_errado";
@@ -212,26 +184,26 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
     <article className="overflow-hidden rounded-2xl border bg-card shadow-soft transition hover:shadow-lift">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b px-5 py-3 text-xs text-muted-foreground">
         <b className="rounded-full bg-secondary px-2.5 py-0.5 text-secondary-foreground">Q{q.id}</b>
-        <span>{q.disciplina} › {assuntos.join(", ")}</span>
+        <span>{q.disciplina} › {q.assuntos.join(", ")}</span>
         <span>Banca: {q.banca}</span>
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>
         {q.nivel && <span>Nível: {q.nivel}</span>}
         <span className={`rounded-full px-2.5 py-0.5 font-semibold ${ce ? "bg-g-yellow/20 text-foreground" : "bg-g-blue/10 text-primary"}`}>{ce ? "Certo/Errado" : "Múltipla escolha"}</span>
         {isAnswered && (
-          <span className={`rounded-full px-2.5 py-0.5 font-semibold ${answered === q.correta ? "bg-success/15 text-success" : "bg-destructive/10 text-destructive"}`}>
-            ✓ {answered === q.correta ? "Acertou" : "Errou"}
+          <span className={`rounded-full px-2.5 py-0.5 font-semibold ${q.acertou ? "bg-success/15 text-success" : "bg-destructive/10 text-destructive"}`}>
+            ✓ {q.acertou ? "Acertou" : "Errou"}
           </span>
         )}
       </div>
       <div className="p-6">
         <p className="mb-5 whitespace-pre-line text-[15px] leading-relaxed">{q.enunciado}</p>
         {q.imagem_url && (
-          <img src={q.imagem_url} alt="Imagem da questão" className="mb-4 max-h-96 rounded-lg border object-contain" />
+          <img src={q.imagem_url} alt="Imagem da questão" loading="lazy" className="mb-4 max-h-96 rounded-lg border object-contain" />
         )}
         {youtubeId(q.video_url) && (
           <div className="mb-4 aspect-video max-w-2xl overflow-hidden rounded-lg border">
-            <iframe className="h-full w-full" src={`https://www.youtube.com/embed/${youtubeId(q.video_url)}`}
+            <iframe className="h-full w-full" src={`https://www.youtube.com/embed/${youtubeId(q.video_url)}`} loading="lazy"
               title="Vídeo da questão" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
           </div>
         )}
@@ -253,11 +225,12 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
         </ul>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {!canAnswer ? null : !isAnswered ? (
-            <button disabled={sel === null} onClick={() => sel !== null && onAnswer(sel)}
+            <button disabled={sel === null || enviando}
+              onClick={async () => { if (sel === null) return; setEnviando(true); await onAnswer(sel); setEnviando(false); }}
               className="rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift disabled:opacity-40 disabled:shadow-none">Responder</button>
           ) : (
-            <span className={`font-semibold ${answered === q.correta ? "text-success" : "text-destructive"}`}>
-              {answered === q.correta ? "Parabéns! Você acertou." : `Você errou. Gabarito: ${ce ? CE[q.correta] : letters[q.correta]}`}
+            <span className={`font-semibold ${q.acertou ? "text-success" : "text-destructive"}`}>
+              {q.acertou ? "Parabéns! Você acertou." : `Você errou. Gabarito: ${q.correta === null ? "?" : ce ? CE[q.correta] : letters[q.correta]}`}
             </span>
           )}
           {q.comentario && (
