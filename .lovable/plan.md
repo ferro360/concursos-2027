@@ -18,8 +18,8 @@ Facilitar a entrada de questões de concursos novos assim que as provas acontece
 ### 3. Documentação da rotina
 - Pequeno guia dentro da página Admin explicando o passo a passo: cadastrar banca/órgão → importar ou gerar → revisar → publicar.
 
-## Observação jurídica
-Enunciados de provas reais pertencem às bancas. A recomendação é gerar questões inéditas no estilo da banca (o gerador já faz isso) ou usar apenas material autorizado. A plataforma não fará coleta automática de provas de sites de terceiros.
+## Observação
+Provas de concursos públicos são atos oficiais de divulgação pública, então a plataforma aceitará tanto questões de provas reais (importadas por planilha ou digitadas) quanto questões inéditas geradas por IA no estilo da banca. A coleta continua manual (colar/digitar/planilha) — sem robô de coleta automática de sites de terceiros.
 
 ## Detalhes técnicos
 - Migração: `ALTER TABLE questions ADD COLUMN prova text NOT NULL DEFAULT ''`.
