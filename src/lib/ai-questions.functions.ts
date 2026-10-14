@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
 import { ehAdmin, SO_ADMIN } from "./ai-guard";
-import { erroIA, IA_NAO_CONFIGURADA, obterIA } from "./ai-provider";
+import { comPlanoB, erroIA, IA_NAO_CONFIGURADA, obterIAs } from "./ai-provider";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
@@ -31,14 +31,15 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
-    const ia = await obterIA();
+    const ias = await obterIAs(context.supabase);
+    const ia = ias.lista[0];
     if (!ia) return { questoes: [], error: IA_NAO_CONFIGURADA };
     if (!(await ehAdmin(context))) return { questoes: [], error: SO_ADMIN };
     const { streamText, Output } = await import("ai");
     // Base de conhecimento da plataforma (busca inteligente + Jev), quando o usuário não colou conteúdo.
     let base = "";
     if (!data.conteudo) {
-      const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
+      const trechos = await retrieveTrechos(ias.lista, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.instrucoes}`);
       if (trechos.length) {
         base = `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; use como referência principal e mantenha fidelidade a ele):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`;
       }
@@ -57,15 +58,14 @@ ${data.nivel ? `Escolaridade: ${data.nivel}` : ""}
 ${data.instrucoes ? `Instruções adicionais: ${data.instrucoes}` : ""}
 ${data.conteudo ? `\nBaseie as questões EXCLUSIVAMENTE no conteúdo abaixo (não invente fatos fora dele):\n"""\n${data.conteudo}\n"""` : base}`;
     try {
-      const result = streamText({
-        model: ia.modelo,
+      const out = await comPlanoB(ias, (m) => streamText({
+        model: m.modelo,
         instructions,
         prompt,
         maxRetries: 0,
         output: Output.object({ schema: Schema }),
-        providerOptions: ia.providerOptions,
-      });
-      const out = await result.output;
+        providerOptions: m.providerOptions,
+      }).output);
       const questoes = out.questoes.filter((q) => {
         if (ce) { q.alternativas = ["Certo", "Errado"]; return q.correta === 0 || q.correta === 1; }
         q.alternativas = q.alternativas.map((a) => a.trim().replace(/^[A-Ea-e][).:-]\s+/, "")).filter(Boolean).slice(0, 5);
@@ -92,7 +92,8 @@ export const comentarQuestao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ComentarInput.parse(d))
   .handler(async ({ data, context }): Promise<{ comentario: string; error?: string }> => {
-    const ia = await obterIA();
+    const ias = await obterIAs(context.supabase);
+    const ia = ias.lista[0];
     if (!ia) return { comentario: "", error: IA_NAO_CONFIGURADA };
     if (!(await ehAdmin(context))) return { comentario: "", error: SO_ADMIN };
     const { streamText } = await import("ai");
@@ -100,7 +101,7 @@ export const comentarQuestao = createServerFn({ method: "POST" })
     const L = "ABCDE";
     const gabarito = ce ? (data.correta === 0 ? "CERTO" : "ERRADO") : `${L[data.correta]}`;
     // Base de conhecimento da plataforma (busca inteligente + Jev).
-    const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
+    const trechos = await retrieveTrechos(ias.lista, context.supabase, `${data.disciplina} ${data.assuntos.join(" ")} ${data.enunciado}`.slice(0, 8000));
     const base = trechos.length
       ? `\n\nBASE DE CONHECIMENTO da plataforma (material de estudo cadastrado; quando ele for relevante, fundamente com base nele e cite o nome do material entre parênteses):\n${trechos.map((t, i) => `[${i + 1}] ${t.titulo}\n${t.conteudo}`).join("\n\n")}`
       : "";
@@ -119,14 +120,13 @@ ${data.enunciado}
 ${ce ? "" : "\nAlternativas:\n" + data.alternativas.map((a, i) => `${L[i]}) ${a}`).join("\n")}
 \nGabarito oficial: ${gabarito}${base}`;
     try {
-      const result = streamText({
-        model: ia.modelo,
+      const comentario = (await comPlanoB(ias, (m) => streamText({
+        model: m.modelo,
         instructions,
         prompt,
         maxRetries: 0,
-        providerOptions: ia.providerOptions,
-      });
-      const comentario = (await result.text).trim();
+        providerOptions: m.providerOptions,
+      }).text)).trim();
       if (!comentario) return { comentario: "", error: "A IA não retornou um comentário." };
       return { comentario };
     } catch (e) {

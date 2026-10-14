@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
 import { consumirCotaIA, COTA_ESGOTADA } from "./ai-guard";
-import { erroIA, IA_NAO_CONFIGURADA, obterIA } from "./ai-provider";
+import { comPlanoB, erroIA, IA_NAO_CONFIGURADA, obterIAs } from "./ai-provider";
 
 const PERGUNTAS_POR_DIA = 30;
 
@@ -32,13 +32,14 @@ export const perguntarProfessor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<{ resposta: string; fontes: Fonte[]; error?: string }> => {
-    const ia = await obterIA();
+    const ias = await obterIAs(context.supabase);
+    const ia = ias.lista[0];
     if (!ia) return { resposta: "", fontes: [], error: IA_NAO_CONFIGURADA };
     if (!(await consumirCotaIA(context, PERGUNTAS_POR_DIA))) return { resposta: "", fontes: [], error: COTA_ESGOTADA };
     const { streamText } = await import("ai");
 
     // Base de conhecimento da plataforma (busca inteligente + Jev).
-    const trechos = await retrieveTrechos(ia, context.supabase, `${data.disciplina} ${data.pergunta}`.slice(0, 8000));
+    const trechos = await retrieveTrechos(ias.lista, context.supabase, `${data.disciplina} ${data.pergunta}`.slice(0, 8000));
     const fontes: Fonte[] = [];
     for (const t of trechos) {
       if (!fontes.some((f) => f.titulo === t.titulo)) fontes.push({ titulo: t.titulo, trecho: t.conteudo.slice(0, 220) });
@@ -61,14 +62,13 @@ Termine com uma frase curta começando com "Dica:" voltada para a prova.`;
     ];
 
     try {
-      const result = streamText({
-        model: ia.modelo,
+      const resposta = (await comPlanoB(ias, (m) => streamText({
+        model: m.modelo,
         instructions,
         messages: mensagens,
         maxRetries: 0,
-        providerOptions: ia.providerOptions,
-      });
-      const resposta = (await result.text).trim();
+        providerOptions: m.providerOptions,
+      }).text)).trim();
       if (!resposta) return { resposta: "", fontes: [], error: "A IA não retornou uma resposta." };
       // Só aparece como fonte o material que a resposta realmente citou.
       return { resposta, fontes: fontes.filter((f) => citado(resposta, f.titulo)) };

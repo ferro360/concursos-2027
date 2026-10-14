@@ -64,6 +64,13 @@
       "when": 1791950000000,
       "tag": "0008_seguranca_desempenho",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791960000000,
+      "tag": "0009_config_ia",
+      "breakpoints": true
     }
   ]
 }

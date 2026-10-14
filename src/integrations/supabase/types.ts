@@ -129,6 +129,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_config: {
+        Row: {
+          atualizado_em: string
+          id: number
+          openrouter_modelo: string
+          plano_b: boolean
+          provedor: string
+        }
+        Insert: {
+          atualizado_em?: string
+          id?: number
+          openrouter_modelo?: string
+          plano_b?: boolean
+          provedor?: string
+        }
+        Update: {
+          atualizado_em?: string
+          id?: number
+          openrouter_modelo?: string
+          plano_b?: boolean
+          provedor?: string
+        }
+        Relationships: []
+      }
       knowledge_chunks: {
         Row: {
           conteudo: string

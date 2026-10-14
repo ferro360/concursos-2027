@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { ehAdmin } from "./ai-guard";
-import { obterIA, IA_NAO_CONFIGURADA, type Embeddings, type IA } from "./ai-provider";
+import { iaDaBiblioteca, obterIAs, IA_NAO_CONFIGURADA, type Embeddings, type IA } from "./ai-provider";
 
 const JEV_MODEL = "typesafe/jev-latest";
 
@@ -49,11 +49,12 @@ async function embedTexts(emb: Embeddings, texts: string[]): Promise<number[][]>
 // Busca inteligente: embeddings + Jev (System One) julgando a relevância de cada trecho.
 // Sem modelo de embeddings (OpenRouter sem OPENROUTER_EMBEDDING_MODEL), segue sem a biblioteca.
 export async function retrieveTrechos(
-  ia: IA,
+  ias: IA[],
   supabase: SupabaseClient<Database>,
   consulta: string,
 ): Promise<TrechoConhecimento[]> {
-  if (!ia.embeddings) return [];
+  const ia = iaDaBiblioteca(ias);
+  if (!ia?.embeddings) return [];
   try {
     const [vetor] = await embedTexts(ia.embeddings, [consulta.slice(0, 8000)]);
     if (!vetor) return [];
@@ -108,7 +109,7 @@ export const addKnowledgeDoc = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DocInput.parse(d))
   .handler(async ({ data, context }): Promise<{ ok: boolean; trechos?: number; error?: string }> => {
-    const ia = await obterIA();
+    const ia = iaDaBiblioteca((await obterIAs(context.supabase)).lista);
     if (!ia) return { ok: false, error: IA_NAO_CONFIGURADA };
     if (!ia.embeddings) return { ok: false, error: "Indexação indisponível: configure OPENROUTER_EMBEDDING_MODEL." };
     if (!(await ehAdmin(context))) return { ok: false, error: "Apenas administradores podem gerenciar a biblioteca." };
