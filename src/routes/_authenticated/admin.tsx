@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -108,6 +108,18 @@ function Questoes() {
 
   return (
     <div>
+      <section className="mb-6 rounded-xl border bg-card p-5 shadow-sm">
+        <h2 className="font-display text-lg font-bold">Saiu concurso novo? Atualize a base</h2>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+          <li>Cadastre banca, órgão, disciplinas e assuntos na aba <b>Cadastros</b> (se ainda não existirem).</li>
+          <li>Importe a prova por planilha ou gere questões no estilo da banca com IA, preenchendo o campo <b>Concurso / Prova</b>.</li>
+          <li>Revise as questões aqui nesta aba (editar/excluir) e elas já ficam disponíveis para os alunos.</li>
+        </ol>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link to="/nova-questao" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift">Importar prova (planilha)</Link>
+          <Link to="/gerar-questoes" className="rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-secondary-foreground transition hover:shadow-soft">Gerar prova com IA</Link>
+        </div>
+      </section>
       <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar questão..."
         className="mb-4 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
