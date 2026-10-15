@@ -29,6 +29,7 @@ const FILTERS = [
   ["orgao", "Órgão"],
   ["nivel", "Nível"],
   ["ano", "Ano"],
+  ["prova", "Prova"],
 ] as const;
 
 type Filtros = { campos: Record<string, string>; assunto: string; tipo: string; status: string; busca: string };
@@ -89,7 +90,7 @@ function Index() {
       (!busca || (q.enunciado + " " + assuntosDe(q).join(" ")).toLowerCase().includes(busca.toLowerCase()));
   }), [questions, f, busca, aplicado, answers, assuntosPorQuestao]);
 
-  const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).sort();
+  const options = (k: (typeof FILTERS)[number][0]) => Array.from(new Set(questions.map((q) => String(q[k])))).filter(Boolean).sort();
   const dDisc = draft.campos["disciplina"];
   const assuntoOptions = Array.from(new Set(questions.filter((q) => !dDisc || q.disciplina === dDisc).flatMap(assuntosDe))).filter(Boolean).sort();
   const vals = Object.values(answers);
@@ -217,6 +218,7 @@ function QuestionCard({ q, assuntos, canAnswer, answered, onAnswer }: { q: Quest
         <span>Órgão: {q.orgao}</span>
         <span>Ano: {q.ano}</span>
         {q.nivel && <span>Nível: {q.nivel}</span>}
+        {q.prova && <span className="font-semibold text-foreground">Prova: {q.prova}</span>}
         <span className={`rounded-full px-2.5 py-0.5 font-semibold ${ce ? "bg-g-yellow/20 text-foreground" : "bg-g-blue/10 text-primary"}`}>{ce ? "Certo/Errado" : "Múltipla escolha"}</span>
         {isAnswered && (
           <span className={`rounded-full px-2.5 py-0.5 font-semibold ${answered === q.correta ? "bg-success/15 text-success" : "bg-destructive/10 text-destructive"}`}>
