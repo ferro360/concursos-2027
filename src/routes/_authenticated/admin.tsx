@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,7 +10,6 @@ import { AdminCadastros } from "@/components/admin-cadastros";
 import { AdminBiblioteca } from "@/components/admin-biblioteca";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useSession } from "@/hooks/use-session";
-import { useQuestoes } from "@/hooks/use-questoes";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -56,35 +55,42 @@ function Admin() {
 
 function Questoes() {
   const qc = useQueryClient();
-  const [draft, setDraft] = useState("");
   const [busca, setBusca] = useState("");
-  const [editing, setEditing] = useState<(Tables<"questions"> & { assunto_ids: number[] }) | null>(null);
-  const { questoes: list, total, hasNextPage, fetchNextPage, isFetchingNextPage } = useQuestoes({ busca }, undefined);
-
-  // a lista não traz o gabarito; a questão completa vem de uma função restrita a admins
-  const editar = async (id: number) => {
-    const [{ data: q, error }, { data: links }] = await Promise.all([
-      supabase.rpc("admin_get_question", { p_id: id }),
-      supabase.from("question_assuntos").select("assunto_id").eq("question_id", id),
-    ]);
-    const row = q?.[0];
-    if (error || !row) { toast.error("Erro ao abrir a questão."); return; }
-    setEditing({ ...row, assunto_ids: links?.length ? links.map((l) => l.assunto_id) : row.assunto_id ? [row.assunto_id] : [] });
-  };
+  const [editing, setEditing] = useState<Tables<"questions"> | null>(null);
+  const { data = [] } = useQuery({
+    queryKey: ["questions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("questions").select("*").order("id");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const { data: links = {} } = useQuery({
+    queryKey: ["question-assuntos"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("question_assuntos").select("question_id, assunto_id");
+      if (error) throw error;
+      const map: Record<number, number[]> = {};
+      for (const l of data) (map[l.question_id] ??= []).push(l.assunto_id);
+      return map;
+    },
+  });
+  const list = data.filter((q) => !busca || `${q.id} ${q.enunciado} ${q.disciplina} ${q.banca}`.toLowerCase().includes(busca.toLowerCase()));
 
   const excluir = async (id: number) => {
     if (!confirm(`Excluir a questão Q${id}? As respostas dela também serão apagadas.`)) return;
     const { error } = await supabase.from("questions").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir."); return; }
     toast.success("Questão excluída.");
-    qc.invalidateQueries({ queryKey: ["questoes"] });
+    qc.invalidateQueries({ queryKey: ["questions"] });
+    qc.invalidateQueries({ queryKey: ["question-assuntos"] });
   };
 
   if (editing) return (
     <div>
       <button onClick={() => setEditing(null)} className="mb-4 text-sm text-primary underline">← Voltar à lista</button>
       <h2 className="mb-4 font-display text-xl font-bold">Editar Q{editing.id}</h2>
-      <QuestionForm initial={editing} submitLabel="Salvar alterações" onSubmit={async (q) => {
+      <QuestionForm initial={{ ...editing, assunto_ids: links[editing.id] ?? (editing.assunto_id ? [editing.assunto_id] : []) }} submitLabel="Salvar alterações" onSubmit={async (q) => {
         const { assunto_ids, ...rest } = q;
         const { error } = await supabase.from("questions").update(rest).eq("id", editing.id);
         if (error) { toast.error("Erro ao salvar."); return; }
@@ -93,7 +99,8 @@ function Questoes() {
           .insert(assunto_ids.map((assunto_id) => ({ question_id: editing.id, assunto_id })));
         if (linkError) { toast.error("Questão salva, mas houve erro ao vincular os assuntos."); return; }
         toast.success("Questão atualizada.");
-        qc.invalidateQueries({ queryKey: ["questoes"] });
+        qc.invalidateQueries({ queryKey: ["questions"] });
+        qc.invalidateQueries({ queryKey: ["question-assuntos"] });
         setEditing(null);
       }} />
     </div>
@@ -101,12 +108,20 @@ function Questoes() {
 
   return (
     <div>
-      <form onSubmit={(e) => { e.preventDefault(); setBusca(draft); }} className="mb-4 flex gap-2">
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Buscar por palavra-chave ou número (ex.: Q123)..."
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Buscar</button>
-      </form>
-      <p className="mb-2 text-sm text-muted-foreground">{total == null ? "Contando..." : `${Number(total).toLocaleString("pt-BR")} questões`}</p>
+      <section className="mb-6 rounded-xl border bg-card p-5 shadow-sm">
+        <h2 className="font-display text-lg font-bold">Saiu concurso novo? Atualize a base</h2>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+          <li>Cadastre banca, órgão, disciplinas e assuntos na aba <b>Cadastros</b> (se ainda não existirem).</li>
+          <li>Importe a prova por planilha ou gere questões no estilo da banca com IA, preenchendo o campo <b>Concurso / Prova</b>.</li>
+          <li>Revise as questões aqui nesta aba (editar/excluir) e elas já ficam disponíveis para os alunos.</li>
+        </ol>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link to="/nova-questao" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-soft transition hover:shadow-lift">Importar prova (planilha)</Link>
+          <Link to="/gerar-questoes" className="rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-secondary-foreground transition hover:shadow-soft">Gerar prova com IA</Link>
+        </div>
+      </section>
+      <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar questão..."
+        className="mb-4 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-muted-foreground">
@@ -120,7 +135,7 @@ function Questoes() {
                 <td className="p-3">{q.disciplina}</td>
                 <td className="p-3">{q.banca} · {q.ano}</td>
                 <td className="whitespace-nowrap p-3 text-right">
-                  <button onClick={() => editar(q.id)} className="mr-3 text-primary underline">Editar</button>
+                  <button onClick={() => setEditing(q)} className="mr-3 text-primary underline">Editar</button>
                   <button onClick={() => excluir(q.id)} className="text-destructive underline">Excluir</button>
                 </td>
               </tr>
@@ -128,11 +143,6 @@ function Questoes() {
           </tbody>
         </table>
       </div>
-      {hasNextPage && (
-        <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="mt-4 rounded-md border px-4 py-2 text-sm font-semibold hover:bg-muted disabled:opacity-50">
-          {isFetchingNextPage ? "Carregando..." : "Carregar mais"}
-        </button>
-      )}
     </div>
   );
 }

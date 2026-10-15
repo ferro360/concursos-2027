@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { retrieveTrechos } from "./knowledge.functions";
-import { ehAdmin, SO_ADMIN } from "./ai-guard";
 
 const Input = z.object({
   disciplina: z.string().min(1).max(200),
@@ -32,7 +31,6 @@ export const gerarQuestoes = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ questoes: QuestaoGerada[]; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { questoes: [], error: "IA não configurada." };
-    if (!(await ehAdmin(context))) return { questoes: [], error: SO_ADMIN };
     const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText, Output } = await import("ai");
     const provider = createOpenAI({
@@ -102,7 +100,6 @@ export const comentarQuestao = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ comentario: string; error?: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { comentario: "", error: "IA não configurada." };
-    if (!(await ehAdmin(context))) return { comentario: "", error: SO_ADMIN };
     const { createOpenAI } = await import("@ai-sdk/openai");
     const { streamText } = await import("ai");
     const provider = createOpenAI({

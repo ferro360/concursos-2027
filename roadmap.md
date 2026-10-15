@@ -4,4 +4,5 @@
 - [x] Gerar questões com IA (revisar e adicionar ao banco)
 - [x] Biblioteca de conhecimento (indexação + Jev) alimentando gerador e comentador
 - [x] Professor IA: chat de dúvidas com resposta fundamentada na biblioteca
+- [x] Campo Concurso/Prova: formulário, planilha, gerador IA, filtro e cartão; guia de atualização no Admin
 - [ ] Importar PDFs para a biblioteca

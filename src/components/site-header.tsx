@@ -31,14 +31,10 @@ export function SiteHeader() {
           <Link to="/ranking" className={link}>Ranking</Link>
           {user ? (
             <>
+              <Link to="/nova-questao" className={link}>Nova questão</Link>
+              <Link to="/gerar-questoes" className={link}>Gerar com IA</Link>
               <Link to="/professor" className={link}>Professor IA</Link>
-              {isAdmin && (
-                <>
-                  <Link to="/nova-questao" className={link}>Nova questão</Link>
-                  <Link to="/gerar-questoes" className={link}>Gerar com IA</Link>
-                  <Link to="/admin" className={link}>Admin</Link>
-                </>
-              )}
+              {isAdmin && <Link to="/admin" className={link}>Admin</Link>}
               <button onClick={sair} className="ml-2 rounded-full border px-4 py-2 font-semibold text-foreground transition hover:bg-muted">Sair</button>
             </>
           ) : (

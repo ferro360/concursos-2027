@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/site-header";
 import { useCadastros } from "@/hooks/use-cadastros";
-import { AdminOnly } from "@/components/admin-only";
 import { gerarQuestoes, type QuestaoGerada } from "@/lib/ai-questions.functions";
 
 export const Route = createFileRoute("/_authenticated/gerar-questoes")({
@@ -20,14 +19,7 @@ export const Route = createFileRoute("/_authenticated/gerar-questoes")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <AdminOnly><GerarQuestoes /></AdminOnly>
-      </main>
-    </div>
-  ),
+  component: GerarQuestoes,
 });
 
 const input = "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
@@ -43,6 +35,7 @@ function GerarQuestoes() {
   const [tipo, setTipo] = useState<"multipla_escolha" | "certo_errado">("multipla_escolha");
   const [quantidade, setQuantidade] = useState(5);
   const [ano, setAno] = useState(new Date().getFullYear());
+  const [prova, setProva] = useState("");
   const [instrucoes, setInstrucoes] = useState("");
   const [conteudo, setConteudo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -82,7 +75,7 @@ function GerarQuestoes() {
       const { data: created, error } = await supabase.from("questions").insert({
         disciplina_id: ids.disciplina!, assunto_id: assuntoIds[0] ?? null, banca_id: ids.banca!, orgao_id: ids.orgao!, nivel_id: ids.nivel,
         disciplina: "", assunto: "", banca: "", orgao: "", nivel: "",
-        ano, tipo, enunciado: q.enunciado.trim(), alternativas: q.alternativas, correta: q.correta, comentario: q.comentario.trim(),
+        ano, tipo, prova: prova.trim(), enunciado: q.enunciado.trim(), alternativas: q.alternativas, correta: q.correta, comentario: q.comentario.trim(),
         created_by: u.user!.id,
       }).select("id").single();
       if (error) continue;
@@ -90,7 +83,8 @@ function GerarQuestoes() {
       ok++;
     }
     setSaving(false);
-    qc.invalidateQueries({ queryKey: ["questoes"] });
+    qc.invalidateQueries({ queryKey: ["questions"] });
+    qc.invalidateQueries({ queryKey: ["question-assuntos"] });
     if (ok) toast.success(`${ok} questão(ões) adicionadas ao banco!`);
     if (ok < sel.length) toast.error(`${sel.length - ok} não puderam ser salvas.`);
     setItens((s) => s.filter((q) => !q.marcada));
@@ -107,7 +101,9 @@ function GerarQuestoes() {
   );
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-2 font-display text-3xl font-bold">Gerar questões com IA</h1>
         <p className="mb-6 text-sm text-muted-foreground">Escolha o tema, gere, revise e salve. Só entram no banco as questões que você marcar.</p>
         <form onSubmit={onGerar} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
@@ -133,6 +129,10 @@ function GerarQuestoes() {
                 <input type="number" min={1950} max={2100} value={ano} onChange={(e) => setAno(Number(e.target.value))} className={input} />
               </label>
             </div>
+            <label className="space-y-1 text-sm sm:col-span-2">
+              <span className="font-semibold">Concurso / Prova <span className="font-normal text-muted-foreground">(opcional — ex.: INSS 2026 — Técnico; vale para todas as questões salvas)</span></span>
+              <input placeholder="Nome do concurso ou prova" value={prova} onChange={(e) => setProva(e.target.value)} className={input} />
+            </label>
           </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold">Assuntos <span className="font-normal text-muted-foreground">(opcional — se não marcar, descreva o tema nas instruções)</span></legend>
@@ -188,6 +188,7 @@ function GerarQuestoes() {
             ))}
           </section>
         )}
-    </>
+      </main>
+    </div>
   );
 }
