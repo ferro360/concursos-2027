@@ -283,6 +283,7 @@ export type Database = {
           nivel_id: number | null
           orgao: string
           orgao_id: number | null
+          prova: string
           tipo: string
           video_url: string
         }
@@ -306,6 +307,7 @@ export type Database = {
           nivel_id?: number | null
           orgao: string
           orgao_id?: number | null
+          prova?: string
           tipo?: string
           video_url?: string
         }
@@ -329,6 +331,7 @@ export type Database = {
           nivel_id?: number | null
           orgao?: string
           orgao_id?: number | null
+          prova?: string
           tipo?: string
           video_url?: string
         }
