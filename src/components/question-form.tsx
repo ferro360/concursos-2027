@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { useCadastros, type CadastroTabela } from "@/hooks/use-cadastros";
 
-export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "nivel_id" | "ano" | "tipo" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url"> & {
+export type QuestionInput = Pick<Tables<"questions">, "disciplina_id" | "assunto_id" | "banca_id" | "orgao_id" | "nivel_id" | "ano" | "tipo" | "enunciado" | "comentario" | "alternativas" | "correta" | "imagem_url" | "video_url" | "prova"> & {
   disciplina: string; assunto: string; banca: string; orgao: string; nivel: string;
   /** todos os assuntos marcados (inclui o principal, assunto_id) */
   assunto_ids: number[];
@@ -45,7 +45,7 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
   );
   const [form, setForm] = useState({
     ano: String(initial?.ano ?? new Date().getFullYear()), enunciado: initial?.enunciado ?? "", comentario: initial?.comentario ?? "",
-    imagem_url: initial?.imagem_url ?? "", video_url: initial?.video_url ?? "",
+    imagem_url: initial?.imagem_url ?? "", video_url: initial?.video_url ?? "", prova: initial?.prova ?? "",
   });
   const [tipo, setTipo] = useState<"multipla_escolha" | "certo_errado">(initial?.tipo === "certo_errado" ? "certo_errado" : "multipla_escolha");
   const [alts, setAlts] = useState(() => [...(initial?.alternativas ?? []), "", "", "", "", ""].slice(0, 5));
@@ -126,6 +126,10 @@ export function QuestionForm({ initial, submitLabel, onSubmit }: { initial?: Par
         <label className="space-y-1 text-sm">
           <span className="font-semibold">Ano</span>
           <input required type="number" min={1950} max={2100} value={form.ano} onChange={set("ano")} className={input} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-semibold">Concurso / Prova <span className="font-normal text-muted-foreground">(opcional — ex.: INSS 2026 — Técnico)</span></span>
+          <input placeholder="Nome do concurso ou prova" value={form.prova} onChange={set("prova")} className={input} />
         </label>
         <label className="space-y-1 text-sm">
           <span className="font-semibold">Tipo</span>
